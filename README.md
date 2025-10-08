@@ -8,7 +8,7 @@
       <p>Fakulteti i Inxhinierisë Elektrike dhe Kompjuterike</p>
       <p>Inxhinieri Kompjuterike dhe Softuerike - Programi Master</p>
       <p><strong>Projekti nga lënda:</strong> “Përgatitja dhe vizualizimi i të dhënave”</p>
-      <p><strong>Profesor:</strong> PhD Mergim Hoti</p>
+      <p><strong>Profesor:</strong> PhD Mërgim Hoti</p>
       <p><strong>Studentët (Gr. 13):</strong></p>
       <ul>
         <li>Fisnik Hazrolli</li>
