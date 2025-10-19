@@ -78,6 +78,37 @@ class DataIntegrator:
         
         return stats
     
+
+    def discretize_and_binarize(self, column=None, bins=4, threshold=None):
+        if self.data is None:
+            print("No data available for processing.")
+            return None
+        
+        df = self.data.copy()
+
+        if column is None:
+            numeric_cols = df.select_dtypes(include=[np.number]).columns
+        else:
+            if column not in df.columns:
+                print(f"Column '{column}' does not exist in the dataset.")
+                return None
+            numeric_cols = [column]
+
+        for col in numeric_cols:
+            try:
+                df[f"{col}_discretized"] = pd.cut(df[col], bins=bins)
+                print(f"Discretization of column '{col}' completed ({bins} bins).")
+
+                if threshold is not None:
+                    df[f"{col}_binary"] = np.where(df[col] > threshold, 1, 0)
+                    print(f"Binarization of column '{col}' completed with threshold {threshold}.")
+            
+            except Exception as e:
+                print(f"Error while processing column '{col}': {e}")
+
+        self.data = df
+        return df
+
     def save_data(self, output_path):
         if self.data is not None:
             self.data.to_csv(output_path, index=False)
@@ -91,6 +122,7 @@ def main():
     # Example usage - would need actual file paths
     # files = integrator.find_files("../unprocessed_datasets/")
     # data = integrator.merge_files(files[:3], sample_size=1000)
+    # discretize = integrator.discretize_and_binarize(bins=5, threshold=50)
     
     # if data is not None:
     #     time_stats = integrator.aggregate_by_time('Date')
