@@ -69,6 +69,48 @@ class DataPreprocessor:
         print(f"Missing values after: {missing_after}")
         return self.data
     
+    def define_data_types(self):
+        conversions = {
+            'Date': 'datetime64[ns]',
+            'Arrest': 'bool',
+            'Domestic': 'bool',
+            'Year': 'int32'
+        }
+        
+        for col, dtype in conversions.items():
+            if col in self.data.columns:
+                try:
+                    if dtype == 'datetime64[ns]':
+                        self.data[col] = pd.to_datetime(self.data[col], errors='coerce')
+                    elif dtype == 'bool':
+                        self.data[col] = self.data[col].astype(str).str.lower() == 'true'
+                    else:
+                        self.data[col] = self.data[col].astype(dtype)
+                except:
+                    pass
+        
+        return self.data.dtypes
+    
+    def create_features(self):
+        created_features = []
+        
+        if 'Date' in self.data.columns:
+            self.data['Hour'] = pd.to_datetime(self.data['Date'], errors='coerce').dt.hour
+            self.data['DayOfWeek'] = pd.to_datetime(self.data['Date'], errors='coerce').dt.dayofweek
+            self.data['Month'] = pd.to_datetime(self.data['Date'], errors='coerce').dt.month
+            created_features.extend(['Hour', 'DayOfWeek', 'Month'])
+        
+        if all(col in self.data.columns for col in ['Latitude', 'Longitude']):
+            chicago_lat, chicago_lon = 41.8781, -87.6298
+            self.data['DistanceFromCenter'] = np.sqrt(
+                (self.data['Latitude'] - chicago_lat)**2 + 
+                (self.data['Longitude'] - chicago_lon)**2
+            )
+            created_features.append('DistanceFromCenter')
+        
+        print(f"Created {len(created_features)} new features: {created_features}")
+        return created_features
+    
     def clean_data(self):
         duplicates_before = self.data.duplicated().sum()
         self.data.drop_duplicates(inplace=True)
@@ -129,10 +171,12 @@ def main():
     preprocessor.load_data(data_file)
     
     if preprocessor.data is not None:
+        preprocessor.define_data_types()
         preprocessor.assess_data_quality()
         preprocessor.sample_data(method='random', n=5000)
         preprocessor.handle_missing_values(strategy='mean')
         preprocessor.clean_data()
+        preprocessor.create_features()
         report = preprocessor.generate_report()
         
         output_file = "../processed_datasets/crimes_2024_processed.csv"
