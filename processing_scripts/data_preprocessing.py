@@ -141,6 +141,26 @@ class DataPreprocessor:
         self.data = sampled_data.copy()
         return sampled_data
     
+    def reduce_dimensionality(self, n_components=2):
+        numeric_cols = self.data.select_dtypes(include=[np.number]).columns
+
+        if len(numeric_cols) < n_components:
+            print("Not enough numeric columns for PCA.")
+            return None
+
+        scaler = StandardScaler()
+        scaled_data = scaler.fit_transform(self.data[numeric_cols])
+
+        pca = PCA(n_components=n_components)
+        pca_result = pca.fit_transform(scaled_data)
+
+        for i in range(n_components):
+            self.data[f'PCA_{i+1}'] = pca_result[:, i]
+
+        explained_var = np.sum(pca.explained_variance_ratio_) * 100
+        print(f"PCA reduction complete ({n_components} components) — Explained variance: {explained_var:.2f}%")
+        return self.data
+
     def generate_report(self):
         print("\n" + "="*50)
         print("DATA PREPROCESSING REPORT")
@@ -177,6 +197,7 @@ def main():
         preprocessor.handle_missing_values(strategy='mean')
         preprocessor.clean_data()
         preprocessor.create_features()
+        preprocessor.reduce_dimensionality(n_components=3)
         report = preprocessor.generate_report()
         
         output_file = "../processed_datasets/crimes_2024_processed.csv"
