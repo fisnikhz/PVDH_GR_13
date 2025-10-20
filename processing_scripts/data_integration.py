@@ -79,36 +79,34 @@ class DataIntegrator:
         return stats
     
 
-    def discretize_and_binarize(self, column=None, bins=4, threshold=None):
+    def discretize_column(self, column, bins=4, labels=None):
         if self.data is None:
-            print("No data available for processing.")
             return None
-        
-        df = self.data.copy()
+        if column not in self.data.columns:
+            print(f"Column '{column}' does not exist.")
+            return None
 
-        if column is None:
-            numeric_cols = df.select_dtypes(include=[np.number]).columns
-        else:
-            if column not in df.columns:
-                print(f"Column '{column}' does not exist in the dataset.")
-                return None
-            numeric_cols = [column]
+        if labels is not None and len(labels) != bins:
+            print("The number of labels must match the number of bins.")
+            return None
 
-        for col in numeric_cols:
-            try:
-                df[f"{col}_discretized"] = pd.cut(df[col], bins=bins)
-                print(f"Discretization of column '{col}' completed ({bins} bins).")
+        self.data[f"{column}_discretized"] = pd.cut(
+            self.data[column],
+            bins=bins,
+            labels=labels
+        )
+        print(f"Discretization of column '{column}' completed with {bins} bins.")
+        return self.data
 
-                if threshold is not None:
-                    df[f"{col}_binary"] = np.where(df[col] > threshold, 1, 0)
-                    print(f"Binarization of column '{col}' completed with threshold {threshold}.")
-            
-            except Exception as e:
-                print(f"Error while processing column '{col}': {e}")
-
-        self.data = df
-        return df
-
+    def binarize_column(self, column, threshold=0):
+        if self.data is None:
+            return None
+        if column not in self.data.columns:
+            print(f"Column '{column}' does not exist.")
+            return None
+        self.data[f"{column}_binary"] = np.where(self.data[column] > threshold, 1, 0)
+        print(f"Binarization of '{column}' done with threshold {threshold}.")
+        return self.data
     def save_data(self, output_path):
         if self.data is not None:
             self.data.to_csv(output_path, index=False)
@@ -122,7 +120,9 @@ def main():
     # Example usage - would need actual file paths
     # files = integrator.find_files("../unprocessed_datasets/")
     # data = integrator.merge_files(files[:3], sample_size=1000)
-    # discretize = integrator.discretize_and_binarize(bins=5, threshold=50)
+    # labels = ["South Zone",  "Central Zone", "North Zone"]
+    # integrator.discretize_column("Latitude", bins=3, labels=labels)
+    # integrator.binarize_column("Arrest", threshold=0)
     
     # if data is not None:
     #     time_stats = integrator.aggregate_by_time('Date')
