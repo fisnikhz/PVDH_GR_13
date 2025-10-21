@@ -110,12 +110,11 @@ class DataAggregator:
         print(f"Sampling aggregation: {self.original_shape[0]} rows → {len(sampled)} rows")
         return sampled
 
-
 def main():
     print("=== Data Aggregation Module ===")
 
     try:
-        data = pd.read_csv("../unprocessed_datasets/Testimi.csv", nrows=5000)
+        data = pd.read_csv("../unprocessed_datasets/Crimes_2024.csv", nrows=5000)
         print(f"Data loaded: {data.shape}")
 
         aggregator = DataAggregator(data)
