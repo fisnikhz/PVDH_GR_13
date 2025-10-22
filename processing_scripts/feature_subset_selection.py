@@ -1,5 +1,7 @@
 import pandas as pd
-from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.feature_selection import SelectKBest, f_classif, RFE
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from data_preprocessing import DataPreprocessor
 
 class FeatureSelector:
@@ -19,9 +21,42 @@ class FeatureSelector:
         selector.fit(X, y)
         selected_columns = X.columns[selector.get_support()]
 
-        print(f"Selected top {len(selected_columns)} features based on '{target_column}': {list(selected_columns)}")
+        print(f"Selected top {len(selected_columns)} features based on '{target_column}' (SelectKBest): {list(selected_columns)}")
         return self.data[selected_columns.tolist() + [target_column]]
 
+    def select_features_rfe(self, target_column: str, k: int = 5) -> pd.DataFrame:
+        numeric_cols = self.data.select_dtypes(include=[float, int]).columns
+        X = self.data[numeric_cols].drop(columns=[target_column], errors='ignore')
+        y = self.data[target_column] if target_column in self.data.columns else None
+
+        if y is None:
+            print(f"Target column '{target_column}' not found. Skipping RFE feature selection.")
+            return self.data
+
+        estimator = LogisticRegression(max_iter=1000)
+        selector = RFE(estimator, n_features_to_select=min(k, X.shape[1]))
+        selector.fit(X, y)
+        selected_columns = X.columns[selector.support_]
+
+        print(f"Selected top {len(selected_columns)} features based on '{target_column}' (RFE): {list(selected_columns)}")
+        return self.data[selected_columns.tolist() + [target_column]]
+
+    def select_features_rf_importance(self, target_column: str, k: int = 5) -> pd.DataFrame:
+        numeric_cols = self.data.select_dtypes(include=[float, int]).columns
+        X = self.data[numeric_cols].drop(columns=[target_column], errors='ignore')
+        y = self.data[target_column] if target_column in self.data.columns else None
+
+        if y is None:
+            print(f"Target column '{target_column}' not found. Skipping Random Forest feature selection.")
+            return self.data
+
+        rf = RandomForestClassifier(n_estimators=100, random_state=42)
+        rf.fit(X, y)
+        feature_importances = pd.Series(rf.feature_importances_, index=X.columns)
+        selected_columns = feature_importances.nlargest(min(k, X.shape[1])).index
+
+        print(f"Selected top {len(selected_columns)} features based on '{target_column}' (Random Forest): {list(selected_columns)}")
+        return self.data[selected_columns.tolist() + [target_column]]
 
 def main():
     preprocessor = DataPreprocessor()
@@ -34,11 +69,21 @@ def main():
         preprocessor.handle_missing_values(strategy='mean')
         
         selector = FeatureSelector(preprocessor.data)
-        selected_data = selector.select_top_features(target_column='Arrest', k=5)
         
-        output_file = "../processed_datasets/crimes_2024_selected_features.csv"
-        selected_data.to_csv(output_file, index=False)
-        print(f"\nSelected features data saved to: {output_file}")
+        selected_data_kbest = selector.select_top_features(target_column='Arrest', k=5)
+        output_file_kbest = "../processed_datasets/crimes_2024_selected_features_kbest.csv"
+        selected_data_kbest.to_csv(output_file_kbest, index=False)
+        print(f"\nSelected features (SelectKBest) saved to: {output_file_kbest}")
+
+        selected_data_rfe = selector.select_features_rfe(target_column='Arrest', k=5)
+        output_file_rfe = "../processed_datasets/crimes_2024_selected_features_rfe.csv"
+        selected_data_rfe.to_csv(output_file_rfe, index=False)
+        print(f"Selected features (RFE) saved to: {output_file_rfe}")
+
+        selected_data_rf = selector.select_features_rf_importance(target_column='Arrest', k=5)
+        output_file_rf = "../processed_datasets/crimes_2024_selected_features_rf.csv"
+        selected_data_rf.to_csv(output_file_rf, index=False)
+        print(f"Selected features (Random Forest) saved to: {output_file_rf}")
 
 if __name__ == "__main__":
     main()
