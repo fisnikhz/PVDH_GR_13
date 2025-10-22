@@ -141,6 +141,27 @@ class DataPreprocessor:
         self.data = sampled_data.copy()
         return sampled_data
     
+    def normalize_features(self):
+        numeric_cols = self.data.select_dtypes(include=[np.number]).columns
+        if len(numeric_cols) > 0:
+            scaler = MinMaxScaler()
+            self.data[numeric_cols] = scaler.fit_transform(self.data[numeric_cols])
+            print(f"Normalized {len(numeric_cols)} numeric columns using MinMaxScaler")
+        else:
+            print("No numeric columns found for normalization")
+        return self.data
+    
+    def encode_categorical(self):
+        categorical_cols = self.data.select_dtypes(include=['object', 'category']).columns
+        for col in categorical_cols:
+            if self.data[col].nunique() < 50:
+                le = LabelEncoder()
+                self.data[f'{col}_encoded'] = le.fit_transform(self.data[col].astype(str))
+                print(f"Encoded categorical column: {col}")
+            else:
+                print(f"Encoding skipped for {col} due to {self.data[col].nunique()} unique values.")        
+                return self.data
+    
     def reduce_dimensionality(self, n_components=2):
         numeric_cols = self.data.select_dtypes(include=[np.number]).columns
 
@@ -197,6 +218,8 @@ def main():
         preprocessor.handle_missing_values(strategy='mean')
         preprocessor.clean_data()
         preprocessor.create_features()
+        preprocessor.normalize_features()
+        preprocessor.encode_categorical()
         preprocessor.reduce_dimensionality(n_components=3)
         report = preprocessor.generate_report()
         
