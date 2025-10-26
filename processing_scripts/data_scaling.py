@@ -42,12 +42,11 @@ class DataScaler:
     def save_scaled_data(self):
         if self.data is not None:
             self.data.to_csv(self.output_path, index=False)
-            print(f"💾 Saved scaled data to {self.output_path}")
+            print(f"Saved scaled data to {self.output_path}")
             return self.output_path
         else:
             print("No data to save.")
             return None
-
 
 #def main():
  #   scaler = DataScaler()
