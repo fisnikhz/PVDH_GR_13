@@ -34,15 +34,22 @@ class DataCleaner:
         print("Standardized column names.")
         return self.data
 
-    def handle_missing_values(self, strategy="mean"):
-        num_cols = self.data.select_dtypes(include=[np.number]).columns
+    def handle_missing_values(self, num_strategy="mean", cat_fill="Unknown"):  # 🟨 EDITED
+        num_cols = self.data.select_dtypes(include=[np.number]).columns  # same
+        cat_cols = self.data.select_dtypes(exclude=[np.number]).columns  # 🔹 NEW
+
         for col in num_cols:
-            if strategy == "mean":
-                self.data[col].fillna(self.data[col].mean(), inplace=True)
-            elif strategy == "median":
-                self.data[col].fillna(self.data[col].median(), inplace=True)
-        self.data.fillna("Unknown", inplace=True)
-        print("Handled missing values.")
+            if self.data[col].isna().any():  # 🔹 NEW
+                if num_strategy == "mean":
+                    self.data[col].fillna(self.data[col].mean(), inplace=True)
+                elif num_strategy == "median":
+                    self.data[col].fillna(self.data[col].median(), inplace=True)
+
+        for col in cat_cols:  # 🔹 NEW
+            if self.data[col].isna().any():
+                self.data[col].fillna(cat_fill, inplace=True)
+
+        print("Handled missing values for numeric and categorical columns.")  # 🟨 EDITED
         return self.data
 
     def remove_duplicates(self):
@@ -65,6 +72,10 @@ class DataCleaner:
         print(f"Saved cleaned data to {output_path}")
         return output_path
 
+    def summary(self):
+        print("\nData Summary After Cleaning:")
+        print(self.data.info())
+        print(self.data.describe(include='all').T.head(10))
 
 #def main():
   # cleaner = DataCleaner()
