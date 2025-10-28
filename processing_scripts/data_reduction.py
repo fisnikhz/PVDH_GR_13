@@ -1,5 +1,6 @@
 # processing_scripts/data_reduction.py
 import pandas as pd
+import numpy as np
 from sklearn.decomposition import PCA
 from pathlib import Path
 
@@ -29,7 +30,7 @@ class DataReducer:
 
         # Identify columns to drop
         upper_tri = corr_matrix.where(
-            pd.np.triu(pd.np.ones(corr_matrix.shape), k=1).astype(bool)
+            np.triu(np.ones(corr_matrix.shape), k=1).astype(bool) 
         )
         to_drop = [column for column in upper_tri.columns if any(upper_tri[column] > threshold)]
 
