@@ -114,7 +114,7 @@ def main():
     print("=== Data Aggregation Module ===")
 
     try:
-        data = pd.read_csv("../unprocessed_datasets/Crimes_2024.csv", nrows=5000)
+        data = pd.read_csv("../processed_datasets/integrated_data.csv", nrows=5000)
         print(f"Data loaded: {data.shape}")
 
         aggregator = DataAggregator(data)
@@ -146,3 +146,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
