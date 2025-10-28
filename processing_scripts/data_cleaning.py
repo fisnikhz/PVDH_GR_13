@@ -38,10 +38,11 @@ class DataCleaner:
         num_cols = self.data.select_dtypes(include=[np.number]).columns
         for col in num_cols:
             if strategy == "mean":
-                self.data[col].fillna(self.data[col].mean(), inplace=True)
+                self.data[col] = self.data[col].fillna(self.data[col].mean())
             elif strategy == "median":
-                self.data[col].fillna(self.data[col].median(), inplace=True)
-        self.data.fillna("Unknown", inplace=True)
+                self.data[col] = self.data[col].fillna(self.data[col].median())
+        # For non-numeric columns
+        self.data = self.data.fillna("Unknown")
         print("Handled missing values.")
         return self.data
 
