@@ -10,7 +10,7 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-#github sample preprocessing
+#gh sample preprocessing
 class DataPreprocessor:
     def __init__(self):
         self.data = None
