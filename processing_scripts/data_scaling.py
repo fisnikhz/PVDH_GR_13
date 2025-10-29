@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 class DataScaler:
-    def __init__(self, input_path="../processed_datasets/integrated_data.csv",
+    def __init__(self, input_path="../processed_datasets/processed_data.csv",
                  output_path="../processed_datasets/scaled_data.csv"):
         self.input_path = Path(input_path)
         self.output_path = Path(output_path)
@@ -48,12 +48,12 @@ class DataScaler:
             print("No data to save.")
             return None
 
-#def main():
- #   scaler = DataScaler()
-  #  scaler.load_data()
-   # scaler.scale_numeric_features(method="standard")  # or "minmax"
-    #scaler.save_scaled_data()
+def main():
+    scaler = DataScaler()  # or "minmax"
+    scaler.load_data()
+    scaler.scale_numeric_features()
+    scaler.save_scaled_data()
 
+if __name__ == "__main__":
+    main()
 
-#if __name__ == "__main__":
-  #  main()
