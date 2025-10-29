@@ -9,25 +9,17 @@ class DataCleaner:
         self.output_dir = Path(output_dir)
         self.data = None
 
-    def load_data(self, pattern="*.csv"):
-        files = list(self.input_dir.glob(pattern))
-        if not files:
-            print("No files found in unprocessed_datasets.")
+    def load_data(self, file_path):
+        """Load a single CSV file."""
+        try:
+            df = pd.read_csv(file_path)
+            df["source_file"] = file_path.stem
+            self.data = df
+            print(f"Loaded {file_path.name} with {len(df)} rows")
+            return df
+        except Exception as e:
+            print(f"Error loading {file_path.name}: {e}")
             return None
-
-        dfs = []
-        for file in files:
-            try:
-                df = pd.read_csv(file)
-                df["source_file"] = file.stem
-                dfs.append(df)
-                print(f"Loaded {file.name}")
-            except Exception as e:
-                print(f"Error loading {file.name}: {e}")
-
-        self.data = pd.concat(dfs, ignore_index=True)
-        print(f"Combined {len(files)} files, total {len(self.data)} rows.")
-        return self.data
 
     def clean_column_names(self):
         self.data.columns = [col.strip().lower().replace(" ", "_") for col in self.data.columns]
@@ -52,18 +44,13 @@ class DataCleaner:
         print(f"Removed {before - len(self.data)} duplicate rows.")
         return self.data
 
-    def handle_outliers(self, z_thresh=3):
-        numeric_cols = self.data.select_dtypes(include=[np.number]).columns
-        for col in numeric_cols:
-            z_scores = np.abs((self.data[col] - self.data[col].mean()) / self.data[col].std())
-            self.data = self.data[z_scores < z_thresh]
-        print("Removed outliers using Z-score threshold.")
-        return self.data
-
-    def save_cleaned_data(self, filename="cleaned_data.csv"):
+    def save_cleaned_data(self, filename=None):
+        if filename is None:
+            # use source_file to make a unique name
+            filename = f"cleaned_{self.data['source_file'].iloc[0]}.csv"
         output_path = self.output_dir / filename
         self.data.to_csv(output_path, index=False)
-        print(f"Saved cleaned data to {output_path}")
+        print(f"Saved cleaned data to {output_path.resolve()}")
         return output_path
 
     def summary(self):
@@ -71,15 +58,18 @@ class DataCleaner:
         print(self.data.info())
         print(self.data.describe(include='all').T.head(10))
 
-#def main():
-  # cleaner = DataCleaner()
-   # df = cleaner.load_data()
-    #if df is not None:
-     #   cleaner.clean_column_names()
-      #  cleaner.handle_missing_values(strategy="mean")
-       # cleaner.remove_duplicates()
-        #cleaner.handle_outliers()
-        #cleaner.save_cleaned_data()
+def main():
+    cleaner = DataCleaner()
+    files = list(cleaner.input_dir.glob("*.csv"))
 
-#if __name__ == "__main__":
- #   main()
+    for file in files:
+        df = cleaner.load_data(file)
+        if df is not None:
+            cleaner.clean_column_names()
+            cleaner.handle_missing_values(strategy="mean")
+            cleaner.remove_duplicates()
+            cleaner.save_cleaned_data()  # no need to pass filename now
+            print(f"Data cleaning completed for {file.name}!")
+
+if __name__ == "__main__":
+    main()

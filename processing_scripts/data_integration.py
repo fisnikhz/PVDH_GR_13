@@ -114,23 +114,29 @@ class DataIntegrator:
             return True
         return False
 
+
 def main():
     integrator = DataIntegrator()
-    
-    # Example usage - would need actual file paths
-    # files = integrator.find_files("../unprocessed_datasets/")
-    # data = integrator.merge_files(files[:3], sample_size=1000)
-    # labels = ["South Zone",  "Central Zone", "North Zone"]
-    # integrator.discretize_column("Latitude", bins=3, labels=labels)
-    # integrator.binarize_column("Arrest", threshold=0)
-    
-    # if data is not None:
-    #     time_stats = integrator.aggregate_by_time('Date')
-    #     cat_stats = integrator.aggregate_by_category('Primary Type')
-    #     summary = integrator.get_summary_stats()
-    #     integrator.save_data("../processed_datasets/integrated_data.csv")
-    
-    return integrator
 
+    # Find cleaned files from the processed_datasets folder
+    files = integrator.find_files("../processed_datasets", pattern="cleaned_*.csv")
+
+    if not files:
+        print("No cleaned files found. Run data_cleaning.py first.")
+        return
+
+    # Merge all cleaned datasets
+    data = integrator.merge_files(files)
+
+    # Optional: create summary statistics or aggregations
+    if data is not None:
+        summary = integrator.get_summary_stats()
+        print("\nIntegration Summary:", summary)
+
+        # Save final integrated dataset
+        integrator.save_data("../processed_datasets/integrated_data.csv")
+        print("Integration completed successfully!")
+
+    return integrator
 if __name__ == "__main__":
-    integrator = main()
+    main()
