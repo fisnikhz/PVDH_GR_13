@@ -214,7 +214,7 @@ def main():
     if preprocessor.data is not None:
         preprocessor.define_data_types()
         preprocessor.assess_data_quality()
-        preprocessor.sample_data(method='random', n=5000)
+        preprocessor.sample_data(method='random', n=100000)
         preprocessor.handle_missing_values(strategy='mean')
         preprocessor.clean_data()
         preprocessor.create_features()
