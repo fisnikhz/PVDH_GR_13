@@ -4,7 +4,9 @@ import glob
 from pathlib import Path
 
 class DataIntegrator:
-    def __init__(self):
+    def __init__(self, input_dir="../unprocessed_datasets", output_dir="../processed_datasets"):
+        self.input_dir = Path(input_dir)
+        self.output_dir = Path(output_dir)
         self.data = None
         self.files_processed = 0
     
@@ -40,34 +42,34 @@ class DataIntegrator:
         
         return self.data
     
-    def aggregate_by_time(self, date_col, freq='M'):
-        if self.data is None:
-            return None
-            
-        df = self.data.copy()
-        df[date_col] = pd.to_datetime(df[date_col])
-        
-        if freq == 'M':
-            df['period'] = df[date_col].dt.to_period('M')
-        elif freq == 'Y':
-            df['period'] = df[date_col].dt.to_period('Y')
-        elif freq == 'D':
-            df['period'] = df[date_col].dt.date
-        
-        time_agg = df.groupby('period').size().reset_index(name='count')
-        return time_agg
-    
-    def aggregate_by_category(self, category_col):
-        if self.data is None:
-            return None
-            
-        cat_agg = self.data.groupby(category_col).size().reset_index(name='count')
-        return cat_agg.sort_values('count', ascending=False)
-    
+    # def aggregate_by_time(self, date_col, freq='M'):
+    #     if self.data is None:
+    #         return None
+    #
+    #     df = self.data.copy()
+    #     df[date_col] = pd.to_datetime(df[date_col])
+    #
+    #     if freq == 'M':
+    #         df['period'] = df[date_col].dt.to_period('M')
+    #     elif freq == 'Y':
+    #         df['period'] = df[date_col].dt.to_period('Y')
+    #     elif freq == 'D':
+    #         df['period'] = df[date_col].dt.date
+    #
+    #     time_agg = df.groupby('period').size().reset_index(name='count')
+    #     return time_agg
+    #
+    # def aggregate_by_category(self, category_col):
+    #     if self.data is None:
+    #         return None
+    #
+    #     cat_agg = self.data.groupby(category_col).size().reset_index(name='count')
+    #     return cat_agg.sort_values('count', ascending=False)
+
     def get_summary_stats(self):
         if self.data is None:
             return None
-            
+
         stats = {
             'total_rows': len(self.data),
             'total_columns': len(self.data.columns),
@@ -75,38 +77,38 @@ class DataIntegrator:
             'missing_values': self.data.isnull().sum().sum(),
             'duplicates': self.data.duplicated().sum()
         }
-        
+
         return stats
-    
 
-    def discretize_column(self, column, bins=4, labels=None):
-        if self.data is None:
-            return None
-        if column not in self.data.columns:
-            print(f"Column '{column}' does not exist.")
-            return None
 
-        if labels is not None and len(labels) != bins:
-            print("The number of labels must match the number of bins.")
-            return None
-
-        self.data[f"{column}_discretized"] = pd.cut(
-            self.data[column],
-            bins=bins,
-            labels=labels
-        )
-        print(f"Discretization of column '{column}' completed with {bins} bins.")
-        return self.data
-
-    def binarize_column(self, column, threshold=0):
-        if self.data is None:
-            return None
-        if column not in self.data.columns:
-            print(f"Column '{column}' does not exist.")
-            return None
-        self.data[f"{column}_binary"] = np.where(self.data[column] > threshold, 1, 0)
-        print(f"Binarization of '{column}' done with threshold {threshold}.")
-        return self.data
+    # def discretize_column(self, column, bins=4, labels=None):
+    #     if self.data is None:
+    #         return None
+    #     if column not in self.data.columns:
+    #         print(f"Column '{column}' does not exist.")
+    #         return None
+    #
+    #     if labels is not None and len(labels) != bins:
+    #         print("The number of labels must match the number of bins.")
+    #         return None
+    #
+    #     self.data[f"{column}_discretized"] = pd.cut(
+    #         self.data[column],
+    #         bins=bins,
+    #         labels=labels
+    #     )
+    #     print(f"Discretization of column '{column}' completed with {bins} bins.")
+    #     return self.data
+    #
+    # def binarize_column(self, column, threshold=0):
+    #     if self.data is None:
+    #         return None
+    #     if column not in self.data.columns:
+    #         print(f"Column '{column}' does not exist.")
+    #         return None
+    #     self.data[f"{column}_binary"] = np.where(self.data[column] > threshold, 1, 0)
+    #     print(f"Binarization of '{column}' done with threshold {threshold}.")
+    #     return self.data
     def save_data(self, output_path):
         if self.data is not None:
             self.data.to_csv(output_path, index=False)
@@ -119,10 +121,10 @@ def main():
     integrator = DataIntegrator()
 
     # Find cleaned files from the processed_datasets folder
-    files = integrator.find_files("../processed_datasets", pattern="cleaned_*.csv")
+    files = integrator.find_files("../unprocessed_datasets", pattern="*.csv")
 
     if not files:
-        print("No cleaned files found. Run data_cleaning.py first.")
+        print("No raw CSV files found in unprocessed_datasets. Please check the folder.")
         return
 
     # Merge all cleaned datasets
