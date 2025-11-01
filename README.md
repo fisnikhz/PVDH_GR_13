@@ -748,6 +748,9 @@ Binary (3+): Ward_binary, District_binary, Arrest (original)
 
 ## Key Takeaways
 
+### Why It Matters
+- This project demonstrates how to build a scalable, end-to-end data pipeline that transforms raw crime data into clean, analysis-ready datasets, enabling efficient insights and reliable machine learning applications.
+
 ### What This Project Demonstrates
 
  **End-to-End Data Pipeline**
