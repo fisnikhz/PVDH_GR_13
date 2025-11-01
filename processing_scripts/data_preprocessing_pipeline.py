@@ -17,10 +17,112 @@ class DataPreprocessor:
         self.original_data = None
         self.scaler = None
         self._feature_selector_external = None
+
         # ---------- Integration ----------
+        def integrate_unprocessed_csvs(self, pattern="*.csv"):
+            file_glob = os.path.join(self.unprocessed_dir, pattern)
+            files = sorted(glob.glob(file_glob))
+            if not files:
+                raise FileNotFoundError(f"No CSV files found in {self.unprocessed_dir} with pattern {pattern}")
+
+            df_list = []
+            for f in files:
+                try:
+                    print(f"Loading {f} ...")
+                    df = pd.read_csv(f, low_memory=False)
+                    df['source_file'] = os.path.basename(f)
+                    df_list.append(df)
+                except Exception as e:
+                    print(f"Warning: could not read {f}: {e}")
+
+            self.data = pd.concat(df_list, axis=0, ignore_index=True)
+            self.original_data = self.data.copy()
+            print(f"Integrated {len(files)} files -> {self.data.shape[0]} rows, {self.data.shape[1]} columns")
+            return self.data
+
         # ---------- Sampling decision ----------
+        def choose_sample_or_full(self, sample_n=5000):
+            choice = input(
+                f"Process full dataset ({len(self.data)} rows) or sample {sample_n} rows? [full/sample] (default sample): ").strip().lower()
+            if choice in ["full", "f", "no", "n"]:
+                print("Processing full dataset.")
+                return  # leave self.data intact
+            else:
+                n = min(sample_n, len(self.data))
+                self.data = self.data.sample(n=n, random_state=42).reset_index(drop=True)
+                print(f"Sampled {n} rows (random).")
+
         # ---------- Assessment ----------
+        def assess_data_quality(self):
+            print(f"Dataset shape: {self.data.shape}")
+            print(f"Memory usage: {self.data.memory_usage(deep=True).sum() / 1024 ** 2:.2f} MB")
+
+            missing_data = self.data.isnull().sum()
+            missing_percent = (missing_data / len(self.data)) * 100
+
+            missing_df = pd.DataFrame({
+                'Column': missing_data.index,
+                'Missing Values': missing_data.values,
+                'Percentage': missing_percent.values
+            }).sort_values('Missing Values', ascending=False)
+
+            print("\nMissing values (top):")
+            print(missing_df[missing_df['Missing Values'] > 0].head(20))
+
+            duplicates = self.data.duplicated().sum()
+            print(f"\nDuplicates: {duplicates} rows ({duplicates / len(self.data) * 100:.2f}%)")
+            return missing_df
+
         # ---------- Cleaning ----------
+        def clean_data(self):
+
+            duplicates_before = self.data.duplicated().sum()
+            self.data.drop_duplicates(inplace=True)
+            duplicates_after = self.data.duplicated().sum()
+            print(f"Duplicates removed: {duplicates_before} -> {duplicates_after}")
+
+            # Standardize text columns: strip and uppercase
+            text_cols = self.data.select_dtypes(include=['object']).columns
+            for col in text_cols:
+                # avoid converting big text blobs unintentionally
+                try:
+                    self.data[col] = self.data[col].astype(str).str.strip()
+                except Exception:
+                    pass
+
+            if 'Date' in self.data.columns:
+                self.data['Date_parsed'] = pd.to_datetime(self.data['Date'], errors='coerce')
+                if 'Year' not in self.data.columns:
+                    self.data['Year'] = self.data['Date_parsed'].dt.year
+                if 'Month' not in self.data.columns:
+                    self.data['Month'] = self.data['Date_parsed'].dt.month
+                if 'Day' not in self.data.columns:
+                    self.data['Day'] = self.data['Date_parsed'].dt.day
+            for col in ["Ward", "Community Area"]:
+                if col in self.data.columns:
+                    self.data[col] = self.data[col].fillna("UNKNOWN").astype(str)
+
+            rename_map = {
+                'Primary Type': 'PrimaryType',
+                'IUCR': 'IUCR',
+                'FBI Code': 'FBI_Code',
+                'Location Description': 'LocationDescription',
+                'Latitude': 'Latitude',
+                'Longitude': 'Longitude',
+                'Arrest': 'Arrest',
+                'Domestic': 'Domestic'
+            }
+            rename_map = {k: v for k, v in rename_map.items() if k in self.data.columns}
+            if rename_map:
+                self.data.rename(columns=rename_map, inplace=True)
+
+            for col in ['Latitude', 'Longitude']:
+                if col in self.data.columns:
+                    self.data[col] = pd.to_numeric(self.data[col], errors='coerce')
+
+            print("Basic cleaning complete.")
+            return self.data
+
         # ---------- Feature creation ----------
         # ---------- Encoding ----------
         # ---------- Feature subset selection ----------
