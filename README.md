@@ -397,7 +397,12 @@ From numeric cols → col_log, col_sqrt, col_binned, col1_multiply_col2
 - **Random Forest:** Tree-based feature importance ranking
 
 **Key Class:** `FeatureSelector`
-
+```
+selector = FeatureSelector(data)
+top_kbest = selector.select_top_features(target_column='Arrest', k=5)
+top_rfe = selector.select_features_rfe(target_column='Arrest', k=5)
+top_rf = selector.select_features_rf_importance(target_column='Arrest', k=5)
+```
 **Selection Algorithms:**
 - Statistical significance testing
 - Model-based backward elimination
@@ -415,7 +420,23 @@ From numeric cols → col_log, col_sqrt, col_binned, col1_multiply_col2
 - Preserve non-numeric columns
 
 **Key Class:** `DataScaler`
+from data_scaling import DataScaler
+```
+# Initialize scaler with input/output paths
+scaler = DataScaler(
+    input_path="../processed_datasets/processed_data.csv",
+    output_path="../processed_datasets/scaled_data.csv"
+)
 
+# Load processed dataset
+scaler.load_data()
+
+# Apply standard scaling to numeric features
+scaler.scale_numeric_features(method="standard")
+
+# Save scaled dataset
+scaler.save_scaled_data()
+```
 ---
 
 ### 8. **sampling_techniques.py**
@@ -429,6 +450,22 @@ From numeric cols → col_log, col_sqrt, col_binned, col1_multiply_col2
 
 **Key Class:** `DataSampler`
 
+```
+import pandas as pd
+from sampling_techniques import DataSampler
+# Load a sample dataset
+data = pd.read_csv("../unprocessed_datasets/Crimes_2024.csv", nrows=10000)
+# Initialize sampler
+sampler = DataSampler(data)
+# Random sample of 1000 rows
+random_sample = sampler.random_sampling(1000)
+# Systematic sample of 1000 rows
+systematic_sample = sampler.systematic_sampling(1000)
+# Sample 10% of the dataset
+percentage_sample = sampler.sample_by_percentage(0.1)
+# Stratified sampling based on a categorical column
+stratified_sample = sampler.stratified_sampling("Primary Type", 1000)
+```
 **Use Cases:**
 - Large dataset handling
 - Training/testing splits
@@ -465,6 +502,33 @@ processor.kmeans_discretization('Score', n_bins=5)
 processor.binarize('Distance', threshold=10)
 ```
 
+## 10. **data_reduction.py**
+**Purpose**: Dimensionality reduction and removal of redundant features
+
+**Capabilities**:
+**Correlation-based reduction**: Drops numeric features with high correlation
+**PCA-based reduction**: Applies Principal Component Analysis
+**Preserves non-numeric columns**: Ensures categorical/text features remain after PCA
+**Flexible input/output**: Works with scaled or processed datasets and saves reduced data
+
+**Key Class**: `DataReducer`
+``` from data_reduction import DataReducer
+
+# Initialize reducer
+reducer = DataReducer(
+    input_path="../processed_datasets/scaled_data.csv",
+    output_path="../processed_datasets/reduced_data.csv"
+)
+# Load data
+reducer.load_data()
+
+# Option 1: Correlation-based reduction
+reducer.correlation_reduction(threshold=0.9)
+# Option 2: PCA-based reduction
+# reducer.pca_reduction(variance_threshold=0.95)
+# Save reduced dataset
+reducer.save_reduced_data()
+```
 ---
 
 ## Technologies Used
