@@ -63,30 +63,30 @@ This is a **data preparation project** that implements various preprocessing, tr
 ```
 PVDH_GR_13/
 │
-├── unprocessed_datasets/          # Raw crime data (2001-2025)
-│   ├── Crimes_2001.csv           # ~300K+ records per file
+├── unprocessed_datasets/            # Raw crime data (2001-2025)
+│   ├── Crimes_2001.csv             # ~300K+ records per file
 │   ├── Crimes_2002.csv
 │   ├── ...
 │   └── Crimes_2025.csv
 │
-├── processed_datasets/            # Cleaned and transformed data
-│   └──crimes_2024_processed.csv # Sample processed output
-│  
+├── processed_datasets/              # Cleaned and transformed data
+│   └── crimes_2024_processed.csv   # Sample processed output
 │
-├── processing_scripts/            # Modular data processing scripts
-│   ├── data_cleaning.py          # Data cleaning and quality improvement
-│   ├── data_preprocessing.py     # Complete preprocessing pipeline
-│   ├── data_integration.py       # Multi-file integration and merging
-│   ├── aggregation.py            # Temporal/spatial/categorical aggregation
-│   ├── feature_engineering.py    # Feature creation and transformation
+├── processing_scripts/              # Modular data processing scripts
+│   ├── data_cleaning.py            # Cleaning and quality improvement
+│   ├── data_integration.py         # Multi-file integration and merging
+│   ├── data_preprocessing.py       # General preprocessing functions
+│   ├── data_preprocessing_pipeline.py # Main pipeline orchestrating all steps
+│   ├── data_aggregation.py         # Temporal/spatial/categorical aggregation
+│   ├── feature_engineering.py      # Feature creation and transformation
 │   ├── feature_subset_selection.py # Feature selection algorithms
-│   ├── data_scaling.py           # Normalization and scaling
-│   ├── sampling_techniques.py    # Random, systematic, stratified sampling
+│   ├── data_scaling.py             # Normalization and scaling
+│   ├── sampling_techniques.py      # Random, systematic, stratified sampling
 │   └── discretization_binarization.py # Binning and binarization
 │
-├── LICENSE                        # MIT License
-├── README.md                      # This file
-└── .gitignore                     # Git ignore rules
+├── LICENSE                          # MIT License
+├── README.md                        # Project documentation
+└── .gitignore                       # Git ignore rules
 ```
 
 ### Directory Breakdown
@@ -332,7 +332,7 @@ Duplicates: 0
 
 ---
 
-### 4. **aggregation.py**
+### 4. **data_aggregation.py**
 **Purpose:** Advanced data aggregation
 
 **Capabilities:**
