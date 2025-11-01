@@ -124,30 +124,107 @@ class DataPreprocessor:
             return self.data
 
         # ---------- Feature creation ----------
+        def create_features(self):
+            created = []
+            if 'Date_parsed' in self.data.columns:
+                self.data['Hour'] = self.data['Date_parsed'].dt.hour
+                self.data['DayOfWeek'] = self.data['Date_parsed'].dt.dayofweek
+                created.extend(['Hour', 'DayOfWeek'])
+
+            if all(c in self.data.columns for c in ['Latitude', 'Longitude']):
+                chicago_lat, chicago_lon = 41.8781, -87.6298
+                self.data['DistanceFromCenter'] = np.sqrt(
+                    (self.data['Latitude'] - chicago_lat) ** 2 +
+                    (self.data['Longitude'] - chicago_lon) ** 2
+                )
+                created.append('DistanceFromCenter')
+
+            if 'PrimaryType' in self.data.columns:
+                violent_keywords = ['HOMICIDE', 'ROBBERY', 'ASSAULT', 'BATTERY', 'CRIM SEXUAL ASSAULT']
+                self.data['IsViolent'] = self.data['PrimaryType'].astype(str).str.upper().isin(violent_keywords).astype(int)
+                created.append('IsViolent')
+
+            print(f"Created features: {created}")
+            return created
+
+        def normalize_numeric_minmax(self, numeric_cols=None, exclude_cols=None):
+            if exclude_cols is None:
+                exclude_cols = [
+                    'ID', 'CaseNumber', 'RecordID', 'Arrest', 'Domestic', 'IsViolent',
+                    'Year', 'Month', 'Day', 'Hour', 'DayOfWeek'
+                ]
+
+            if numeric_cols is None:
+                numeric_cols = self.data.select_dtypes(include=[np.number]).columns.tolist()
+
+            numeric_cols = [c for c in numeric_cols if c not in exclude_cols]
+
+            if not numeric_cols:
+                print("No numeric columns found for normalization.")
+                return []
+
+            scaler = MinMaxScaler()
+            self.data[numeric_cols] = scaler.fit_transform(self.data[numeric_cols])
+            print(f"Normalized {len(numeric_cols)} numeric columns using MinMaxScaler: {numeric_cols}")
+
+            return numeric_cols
+
         # ---------- Encoding ----------
+        def encode_categoricals(self, max_unique_for_label=50):
+            cat_cols = self.data.select_dtypes(include=['object', 'category']).columns.tolist()
+            encoded_cols = []
+            for col in cat_cols:
+                nunique = self.data[col].nunique(dropna=True)
+                if nunique == 0:
+                    continue
+                if nunique <= max_unique_for_label:
+                    le = LabelEncoder()
+                    self.data[f"{col}_encoded"] = le.fit_transform(self.data[col].astype(str))
+                    encoded_cols.append(f"{col}_encoded")
+                else:
+                    print(f"Skipping label encoding for {col} (unique={nunique})")
+            print(f"Encoded columns: {encoded_cols}")
+            return encoded_cols
+
         # ---------- Feature subset selection ----------
-    def create_features(self):
-        created = []
-        if 'Date_parsed' in self.data.columns:
-            self.data['Hour'] = self.data['Date_parsed'].dt.hour
-            self.data['DayOfWeek'] = self.data['Date_parsed'].dt.dayofweek
-            created.extend(['Hour', 'DayOfWeek'])
+        def select_feature_subset(self, target_column=None, k=20):
+            if self._feature_selector_external is not None:
+                try:
+                    print("Running external feature selector...")
+                    selected_df = self._feature_selector_external(self.data.copy())
+                    if isinstance(selected_df, pd.DataFrame):
+                        self.data = selected_df
+                        print("External selector returned a dataframe; replaced data.")
+                        return self.data.columns.tolist()
+                    elif isinstance(selected_df, (list, tuple, np.ndarray)):
+                        print(f"External selector returned feature list: {len(selected_df)} features")
+                        keep = [c for c in self.data.columns if c in selected_df]
+                        self.data = self.data[keep].copy()
+                        return keep
+                except Exception as e:
+                    print(f"External selector failed: {e}\nFalling back to internal selector.")
 
-        if all(c in self.data.columns for c in ['Latitude', 'Longitude']):
-            chicago_lat, chicago_lon = 41.8781, -87.6298
-            self.data['DistanceFromCenter'] = np.sqrt(
-                (self.data['Latitude'] - chicago_lat) ** 2 +
-                (self.data['Longitude'] - chicago_lon) ** 2
-            )
-            created.append('DistanceFromCenter')
+            numeric_cols = self.data.select_dtypes(include=[np.number]).columns.tolist()
+            if target_column and target_column in self.data.columns:
+                print(f"Selecting top {k} features using SelectKBest with target '{target_column}'")
+                tmp = self.data.dropna(subset=[target_column])
+                X = tmp[numeric_cols].fillna(0)
+                y = tmp[target_column]
+                try:
+                    skb = SelectKBest(score_func=f_classif, k=min(k, X.shape[1]))
+                    skb.fit(X, y)
+                    mask = skb.get_support()
+                    chosen = [c for c, m in zip(numeric_cols, mask) if m]
+                except Exception:
+                    chosen = sorted(numeric_cols, key=lambda c: self.data[c].var(), reverse=True)[:k]
+            else:
+                print(f"No target provided. Selecting top {k} numeric features by variance.")
+                chosen = sorted(numeric_cols, key=lambda c: self.data[c].var(), reverse=True)[:k]
 
-        if 'PrimaryType' in self.data.columns:
-            violent_keywords = ['HOMICIDE', 'ROBBERY', 'ASSAULT', 'BATTERY', 'CRIM SEXUAL ASSAULT']
-            self.data['IsViolent'] = self.data['PrimaryType'].astype(str).str.upper().isin(violent_keywords).astype(int)
-            created.append('IsViolent')
-
-        print(f"Created features: {created}")
-        return created
+            keep_cols = chosen + [c for c in self.data.columns if c not in numeric_cols]
+            self.data = self.data[keep_cols].copy()
+            print(f"Selected features: {chosen}")
+            return chosen
         # ---------- Aggregation ----------
         # ---------- Discretization ----------
         # ---------- Binarization ----------
