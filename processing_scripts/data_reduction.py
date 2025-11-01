@@ -6,7 +6,7 @@ from pathlib import Path
 
 class DataReducer:
     def __init__(self,
-                 input_path="../processed_datasets/scaled_data.csv",
+                 input_path="../processed_datasets/crimes_2024_selected_features_kbest.csv",
                  output_path="../processed_datasets/reduced_data.csv"):
         self.input_path = Path(input_path)
         self.output_path = Path(output_path)
@@ -38,26 +38,26 @@ class DataReducer:
         print(f"🧹 Dropped {len(to_drop)} highly correlated features (threshold={threshold}).")
         return self.data
 
-    def pca_reduction(self, variance_threshold=0.95):
-        if self.data is None:
-            print("No data loaded.")
-            return None
-
-        numeric_data = self.data.select_dtypes(include=["float64", "int64"])
-        pca = PCA(n_components=variance_threshold)
-        reduced_values = pca.fit_transform(numeric_data)
-
-        reduced_df = pd.DataFrame(
-            reduced_values,
-            columns=[f"PC{i+1}" for i in range(reduced_values.shape[1])]
-        )
-
-        non_numeric = self.data.select_dtypes(exclude=["float64", "int64"])
-        self.data = pd.concat([non_numeric.reset_index(drop=True), reduced_df], axis=1)
-
-        print(f"📉 PCA reduced data to {reduced_df.shape[1]} components "
-              f"({variance_threshold*100:.0f}% variance retained).")
-        return self.data
+    # def pca_reduction(self, variance_threshold=0.95):
+    #     if self.data is None:
+    #         print("No data loaded.")
+    #         return None
+    #
+    #     numeric_data = self.data.select_dtypes(include=["float64", "int64"])
+    #     pca = PCA(n_components=variance_threshold)
+    #     reduced_values = pca.fit_transform(numeric_data)
+    #
+    #     reduced_df = pd.DataFrame(
+    #         reduced_values,
+    #         columns=[f"PC{i+1}" for i in range(reduced_values.shape[1])]
+    #     )
+    #
+    #     non_numeric = self.data.select_dtypes(exclude=["float64", "int64"])
+    #     self.data = pd.concat([non_numeric.reset_index(drop=True), reduced_df], axis=1)
+    #
+    #     print(f"📉 PCA reduced data to {reduced_df.shape[1]} components "
+    #           f"({variance_threshold*100:.0f}% variance retained).")
+    #     return self.data
 
     def save_reduced_data(self):
         if self.data is not None:

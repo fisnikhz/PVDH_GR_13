@@ -6,10 +6,20 @@ warnings.filterwarnings('ignore')
 
 
 class DiscretizationBinarization:
-    
-    def __init__(self, data):
-        self.data = data.copy()
-        self.original_data = data.copy()
+
+    def __init__(self, data=None, csv_path=None):
+        if csv_path is not None:
+            self.data = pd.read_csv(csv_path)
+        elif data is not None:
+            self.data = data.copy()
+        else:
+            self.data = None
+
+        if self.data is not None:
+            self.original_data = self.data.copy()
+        else:
+            self.original_data = None
+
         self.discretization_info = {}
         self.binarization_info = {}
     
@@ -192,56 +202,41 @@ class DiscretizationBinarization:
             'discretization': self.discretization_info,
             'binarization': self.binarization_info
         }
-    
+
+
     def get_data(self):
         return self.data
+
+    def save_data(self, output_path="../processed_datasets/discretized_binarized.csv"):
+        if self.data is not None:
+            self.data.to_csv(output_path, index=False)
+            print(f"Saved processed data to {output_path}")
+            return output_path
+        else:
+            print("No data to save.")
+            return None
 
 
 # Demo usage
 if __name__ == "__main__":
-    print("Discretization & Binarization Module Demo\n")
-    
-    # Create sample data
-    np.random.seed(42)
-    sample_data = pd.DataFrame({
-        'Age': np.random.randint(18, 80, 1000),
-        'Income': np.random.normal(50000, 20000, 1000),
-        'Score': np.random.uniform(0, 100, 1000),
-        'Distance': np.random.exponential(10, 1000)
-    })
-    
-    print("Sample data created:")
-    print(sample_data.head())
-    print(f"\nShape: {sample_data.shape}")
-    
-    # Initialize processor
-    processor = DiscretizationBinarization(sample_data)
-    
-    # Apply different discretization methods
-    print("\n" + "="*60)
-    print("Applying discretization techniques...")
-    print("="*60 + "\n")
-    
+    print("Discretization & Binarization Pipeline Run\n")
+
+    # Initialize processor with scaled CSV from previous step
+    processor = DiscretizationBinarization(csv_path="../processed_datasets/processed_data.csv")
+
+    # Apply discretization methods (modify columns as needed)
     processor.equal_width_discretization('Age', n_bins=5, labels=['Young', 'Adult', 'Middle', 'Senior', 'Elder'])
     processor.equal_frequency_discretization('Income', n_bins=4, labels=['Low', 'Medium', 'High', 'VeryHigh'])
     processor.kmeans_discretization('Score', n_bins=3)
-    processor.custom_discretization('Distance', bin_edges=[0, 5, 10, 20, 100], labels=['Close', 'Medium', 'Far', 'VeryFar'])
-    
+    processor.custom_discretization('Distance', bin_edges=[0, 5, 10, 20, 100],
+                                    labels=['Close', 'Medium', 'Far', 'VeryFar'])
+
     # Apply binarization
-    print("\n" + "="*60)
-    print("Applying binarization...")
-    print("="*60 + "\n")
-    
     processor.binarize('Score', threshold=50)
     processor.binarize('Distance', threshold=10)
-    
-    # Get summary
-    summary = processor.get_summary()
-    
-    # Show results
-    print("\n" + "="*60)
-    print("RESULTS PREVIEW")
-    print("="*60)
-    print(processor.get_data().head(10))
-    
-    print("\n✓ Demo completed successfully!")
+
+    # Show summary
+    processor.get_summary()
+
+    # Save output CSV for next step
+    processor.save_data("../processed_datasets/discretized_binarized.csv")

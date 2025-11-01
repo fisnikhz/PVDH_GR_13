@@ -5,8 +5,13 @@ from sklearn.linear_model import LogisticRegression
 from data_preprocessing import DataPreprocessor
 
 class FeatureSelector:
-    def __init__(self, data: pd.DataFrame):
-        self.data = data
+    def __init__(self, data=None, csv_path=None):
+        if csv_path is not None:
+            self.data = pd.read_csv(csv_path)
+        elif data is not None:
+            self.data = data.copy()
+        else:
+            self.data = None
 
     def select_top_features(self, target_column: str, k: int = 5) -> pd.DataFrame:
         numeric_cols = self.data.select_dtypes(include=[float, int]).columns
@@ -58,32 +63,54 @@ class FeatureSelector:
         print(f"Selected top {len(selected_columns)} features based on '{target_column}' (Random Forest): {list(selected_columns)}")
         return self.data[selected_columns.tolist() + [target_column]]
 
+# def main():
+#     preprocessor = DataPreprocessor()
+#     data_file = "../unprocessed_datasets/Crimes_2024.csv"
+#     preprocessor.load_data(data_file)
+#
+#     if preprocessor.data is not None:
+#         preprocessor.assess_data_quality()
+#         preprocessor.clean_data()
+#         preprocessor.handle_missing_values(strategy='mean')
+#
+#         selector = FeatureSelector(preprocessor.data)
+#
+#         selected_data_kbest = selector.select_top_features(target_column='Arrest', k=5)
+#         output_file_kbest = "../processed_datasets/crimes_2024_selected_features_kbest.csv"
+#         selected_data_kbest.to_csv(output_file_kbest, index=False)
+#         print(f"\nSelected features (SelectKBest) saved to: {output_file_kbest}")
+#
+#         selected_data_rfe = selector.select_features_rfe(target_column='Arrest', k=5)
+#         output_file_rfe = "../processed_datasets/crimes_2024_selected_features_rfe.csv"
+#         selected_data_rfe.to_csv(output_file_rfe, index=False)
+#         print(f"Selected features (RFE) saved to: {output_file_rfe}")
+#
+#         selected_data_rf = selector.select_features_rf_importance(target_column='Arrest', k=5)
+#         output_file_rf = "../processed_datasets/crimes_2024_selected_features_rf.csv"
+#         selected_data_rf.to_csv(output_file_rf, index=False)
+#         print(f"Selected features (Random Forest) saved to: {output_file_rf}")
+#
+# if __name__ == "__main__":
+#     main()
+
 def main():
-    preprocessor = DataPreprocessor()
-    data_file = "../unprocessed_datasets/Crimes_2024.csv"
-    preprocessor.load_data(data_file)
-    
-    if preprocessor.data is not None:
-        preprocessor.assess_data_quality()
-        preprocessor.clean_data()
-        preprocessor.handle_missing_values(strategy='mean')
-        
-        selector = FeatureSelector(preprocessor.data)
-        
-        selected_data_kbest = selector.select_top_features(target_column='Arrest', k=5)
-        output_file_kbest = "../processed_datasets/crimes_2024_selected_features_kbest.csv"
-        selected_data_kbest.to_csv(output_file_kbest, index=False)
-        print(f"\nSelected features (SelectKBest) saved to: {output_file_kbest}")
+    # Path to the feature-engineered CSV
+    fe_csv = "../processed_datasets/feature_engineered.csv"
 
-        selected_data_rfe = selector.select_features_rfe(target_column='Arrest', k=5)
-        output_file_rfe = "../processed_datasets/crimes_2024_selected_features_rfe.csv"
-        selected_data_rfe.to_csv(output_file_rfe, index=False)
-        print(f"Selected features (RFE) saved to: {output_file_rfe}")
+    # Load the feature-engineered data directly
+    selector = FeatureSelector(csv_path=fe_csv)
 
-        selected_data_rf = selector.select_features_rf_importance(target_column='Arrest', k=5)
-        output_file_rf = "../processed_datasets/crimes_2024_selected_features_rf.csv"
-        selected_data_rf.to_csv(output_file_rf, index=False)
-        print(f"Selected features (Random Forest) saved to: {output_file_rf}")
+    # Target column (your label)
+    target_col = 'Arrest'
 
-if __name__ == "__main__":
-    main()
+    # Select top features using different methods
+    selected_data_kbest = selector.select_top_features(target_column=target_col, k=5)
+    selected_data_rfe = selector.select_features_rfe(target_column=target_col, k=5)
+    selected_data_rf = selector.select_features_rf_importance(target_column=target_col, k=5)
+
+    # Save the results
+    selected_data_kbest.to_csv("../processed_datasets/selected_features_kbest.csv", index=False)
+    selected_data_rfe.to_csv("../processed_datasets/selected_features_rfe.csv", index=False)
+    selected_data_rf.to_csv("../processed_datasets/selected_features_rf.csv", index=False)
+
+    print("Feature selection complete. CSVs saved to processed_datasets.")

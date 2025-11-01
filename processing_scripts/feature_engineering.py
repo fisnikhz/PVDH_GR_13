@@ -6,10 +6,21 @@ warnings.filterwarnings('ignore')
 
 
 class FeatureEngineer:
-    
-    def __init__(self, data):
-        self.data = data.copy()
-        self.original_data = data.copy()
+
+    def __init__(self, data=None, csv_path=None):
+
+        if csv_path is not None:
+            self.data = pd.read_csv(csv_path)
+        elif data is not None:
+            self.data = data.copy()
+        else:
+            self.data = None
+
+        if self.data is not None:
+            self.original_data = self.data.copy()
+        else:
+            self.original_data = None
+
         self.created_features = []
     
     def create_datetime_features(self, date_column):
@@ -269,30 +280,59 @@ class FeatureEngineer:
     def get_data(self):
         return self.data
 
+    def save_data(self, output_path="../processed_datasets/feature_engineered.csv"):
+        if self.data is not None:
+            self.data.to_csv(output_path, index=False)
+            print(f"Saved feature engineered data to {output_path}")
+            return output_path
+        else:
+            print("No data to save.")
+            return None
+
+
+# if __name__ == "__main__":
+#     print("Feature Engineering Module Demo\n")
+#
+#     np.random.seed(42)
+#     sample_data = pd.DataFrame({
+#         'Date': pd.date_range('2024-01-01', periods=100, freq='D'),
+#         'Sales': np.random.randint(100, 1000, 100),
+#         'Cost': np.random.randint(50, 500, 100),
+#         'Latitude': np.random.uniform(41.5, 42.0, 100),
+#         'Longitude': np.random.uniform(-88.0, -87.5, 100),
+#         'Category': np.random.choice(['A', 'B', 'C'], 100),
+#         'Temperature': np.random.uniform(0, 35, 100)
+#     })
+#
+#     print("Sample data:")
+#     print(sample_data.head())
+#
+#     fe = FeatureEngineer(sample_data)
+#
+#     print("\n" + "="*60)
+#     print("Creating features...")
+#     print("="*60 + "\n")
+#
+#     fe.create_datetime_features('Date')
+#     fe.create_interaction_features('Sales', 'Cost', 'multiply')
+#     fe.create_ratio_features('Sales', 'Cost')
+#     fe.create_aggregation_features('Category', 'Sales', 'mean')
+#     fe.create_log_features(['Sales', 'Cost'])
+#     fe.create_distance_features('Latitude', 'Longitude', 41.8781, -87.6298)
+#     fe.create_frequency_encoding('Category')
+#
+#     summary = fe.get_summary()
+#
+#     print("\n" + "="*60)
+#     print("RESULTS PREVIEW")
+#     print("="*60)
+#     print(fe.get_data().head())
+#
+#     print("\n✓ Demo completed!")
 
 if __name__ == "__main__":
-    print("Feature Engineering Module Demo\n")
-    
-    np.random.seed(42)
-    sample_data = pd.DataFrame({
-        'Date': pd.date_range('2024-01-01', periods=100, freq='D'),
-        'Sales': np.random.randint(100, 1000, 100),
-        'Cost': np.random.randint(50, 500, 100),
-        'Latitude': np.random.uniform(41.5, 42.0, 100),
-        'Longitude': np.random.uniform(-88.0, -87.5, 100),
-        'Category': np.random.choice(['A', 'B', 'C'], 100),
-        'Temperature': np.random.uniform(0, 35, 100)
-    })
-    
-    print("Sample data:")
-    print(sample_data.head())
-    
-    fe = FeatureEngineer(sample_data)
-    
-    print("\n" + "="*60)
-    print("Creating features...")
-    print("="*60 + "\n")
-    
+    fe = FeatureEngineer(csv_path="../processed_datasets/discretized_binarized.csv")
+
     fe.create_datetime_features('Date')
     fe.create_interaction_features('Sales', 'Cost', 'multiply')
     fe.create_ratio_features('Sales', 'Cost')
@@ -300,12 +340,7 @@ if __name__ == "__main__":
     fe.create_log_features(['Sales', 'Cost'])
     fe.create_distance_features('Latitude', 'Longitude', 41.8781, -87.6298)
     fe.create_frequency_encoding('Category')
-    
-    summary = fe.get_summary()
-    
-    print("\n" + "="*60)
-    print("RESULTS PREVIEW")
-    print("="*60)
-    print(fe.get_data().head())
-    
-    print("\n✓ Demo completed!")
+
+    fe.get_summary()
+    fe.save_data("../processed_datasets/feature_engineered.csv")
+
