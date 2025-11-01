@@ -226,6 +226,105 @@ class DataPreprocessor:
             print(f"Selected features: {chosen}")
             return chosen
         # ---------- Aggregation ----------
+
+        # ---------- Aggregation ----------
+def aggregate_monthly_and_type_counts(self):
+    if 'Year' not in self.data.columns or 'Month' not in self.data.columns:
+        # try to extract from Date_parsed
+        if 'Date_parsed' in self.data.columns:
+            self.data['Year'] = self.data['Date_parsed'].dt.year
+            self.data['Month'] = self.data['Date_parsed'].dt.month
+        else:
+            print("No Year/Month available for aggregation; skipping aggregation.")
+            return []
+
+    self.data['YearMonth'] = self.data['Year'].astype(str) + "-" + self.data['Month'].astype(str).str.zfill(2)
+
+    monthly_counts = self.data.groupby('YearMonth').size().rename('MonthlyCrimeCount').reset_index()
+    self.data = self.data.merge(monthly_counts, on='YearMonth', how='left')
+
+    created = ['MonthlyCrimeCount']
+    if 'PrimaryType' in self.data.columns:
+        type_month_counts = self.data.groupby(['YearMonth', 'PrimaryType']).size().rename(
+            'TypeMonthlyCount').reset_index()
+        self.data = self.data.merge(type_month_counts, on=['YearMonth', 'PrimaryType'], how='left')
+        created.append('TypeMonthlyCount')
+
+    print(f"Aggregation complete. Created features: {created}")
+    return created
+
+
+# ---------- Discretization ----------
+def discretize_numeric(self, numeric_cols=None, n_bins=5, strategy='quantile', exclude_cols=None):
+    if exclude_cols is None:
+        exclude_cols = [
+            'ID', 'CaseNumber', 'RecordID', 'Arrest', 'Domestic', 'IsViolent',
+            'Year', 'Month', 'Day', 'Hour', 'DayOfWeek'
+        ]
+
+    if numeric_cols is None:
+        numeric_cols = self.data.select_dtypes(include=[np.number]).columns.tolist()
+
+    # Filter columns
+    numeric_cols = [
+        c for c in numeric_cols
+        if c not in exclude_cols and self.data[c].nunique() > n_bins
+    ]
+
+    if not numeric_cols:
+        print("No numeric columns suitable for discretization.")
+        return []
+
+    est = KBinsDiscretizer(n_bins=n_bins, encode='ordinal', strategy=strategy)
+    discretized = est.fit_transform(self.data[numeric_cols].fillna(0))
+    for i, col in enumerate(numeric_cols):
+        self.data[f"{col}_bin"] = discretized[:, i].astype(int)
+
+    print(f"Discretized {len(numeric_cols)} columns into {n_bins} bins (strategy={strategy}).")
+    return [f"{c}_bin" for c in numeric_cols]
+
+
+# ---------- Binarization ----------
+def binarize_numeric(self):
+    numeric_cols = ['Beat', 'District', 'DistanceFromCenter', 'MonthlyCrimeCount', 'TypeMonthlyCount']
+
+    medians = self.data[numeric_cols].median()
+    binarized = self.data[numeric_cols].apply(lambda col: (col > medians[col.name]).astype(int))
+    for c in numeric_cols:
+        self.data[f"{c}_bin01"] = binarized[c]
+
+    print(f"Binarized {len(numeric_cols)} numeric columns using per-column median threshold.")
+    return [f"{c}_bin01" for c in numeric_cols]
+
+
+# ---------- PCA ----------
+def apply_pca(self, n_components=3, numeric_cols=None, exclude_cols=None):
+
+    if exclude_cols is None:
+        exclude_cols = ['ID', 'CaseNumber', 'RecordID', 'Arrest', 'Domestic', 'IsViolent']
+
+    if numeric_cols is None:
+        numeric_cols = self.data.select_dtypes(include=[np.number]).columns.tolist()
+
+    numeric_cols = [c for c in numeric_cols if c not in exclude_cols and self.data[c].nunique() > 2]
+
+    if len(numeric_cols) < n_components:
+        print(f"Not enough numeric columns for PCA (found {len(numeric_cols)}, need {n_components}).")
+        return []
+
+    scaler = StandardScaler()
+    X = self.data[numeric_cols].fillna(0)
+    X_scaled = scaler.fit_transform(X)
+
+    pca = PCA(n_components=n_components)
+    pcs = pca.fit_transform(X_scaled)
+    for i in range(n_components):
+        self.data[f'PCA_{i + 1}'] = pcs[:, i]
+
+    explained = np.sum(pca.explained_variance_ratio_) * 100
+    print(
+        f"PCA applied: {n_components} components, explained variance {explained:.2f}% on {len(numeric_cols)} columns")
+    return [f'PCA_{i + 1}' for i in range(n_components)]
         # ---------- Discretization ----------
         # ---------- Binarization ----------
         # ---------- PCA ----------
