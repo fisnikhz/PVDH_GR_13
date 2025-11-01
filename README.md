@@ -153,9 +153,6 @@ PVDH_GR_13/
 ID,Case Number,Date,Block,IUCR,Primary Type,Description,Location Description,Arrest,Domestic,...
 13707878,JJ100066,12/31/2024 09:18:00 PM,061XX N HAMILTON AVE,0560,ASSAULT,SIMPLE,APARTMENT,false,true,...
 ```
-Note: During the data integration step, an additional column named source_file (and its encoded version source_file_encoded) is added to track the origin of each record.
-This allows tracing each crime record back to its source CSV file (e.g., Crimes_2001.csv, Crimes_2025.csv).
-As a result, while the original dataset has 22 columns, the processed dataset contains 23 columns after integration, and additional features may be created later during preprocessing.
 ---
 
 ## Data Processing Workflow
