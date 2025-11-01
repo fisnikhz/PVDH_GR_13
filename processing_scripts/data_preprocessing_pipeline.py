@@ -24,6 +24,28 @@ class DataPreprocessor:
         # ---------- Feature creation ----------
         # ---------- Encoding ----------
         # ---------- Feature subset selection ----------
+    def create_features(self):
+        created = []
+        if 'Date_parsed' in self.data.columns:
+            self.data['Hour'] = self.data['Date_parsed'].dt.hour
+            self.data['DayOfWeek'] = self.data['Date_parsed'].dt.dayofweek
+            created.extend(['Hour', 'DayOfWeek'])
+
+        if all(c in self.data.columns for c in ['Latitude', 'Longitude']):
+            chicago_lat, chicago_lon = 41.8781, -87.6298
+            self.data['DistanceFromCenter'] = np.sqrt(
+                (self.data['Latitude'] - chicago_lat) ** 2 +
+                (self.data['Longitude'] - chicago_lon) ** 2
+            )
+            created.append('DistanceFromCenter')
+
+        if 'PrimaryType' in self.data.columns:
+            violent_keywords = ['HOMICIDE', 'ROBBERY', 'ASSAULT', 'BATTERY', 'CRIM SEXUAL ASSAULT']
+            self.data['IsViolent'] = self.data['PrimaryType'].astype(str).str.upper().isin(violent_keywords).astype(int)
+            created.append('IsViolent')
+
+        print(f"Created features: {created}")
+        return created
         # ---------- Aggregation ----------
         # ---------- Discretization ----------
         # ---------- Binarization ----------
