@@ -165,24 +165,42 @@ Below is a detailed breakdown of each module's responsibility:
 * **Logic:** Uses pd.read_csv(low_memory=False) to prevent type inference errors and appends a source_file column to track the origin year of each record.
 * **Output:** A single concatenated DataFrame containing all historical data. 
 
-2. **Quality Assessment (assess_data_quality)**
+<img src="ReadMe_Images/integration.png"></img>
+
+
+2. **Sampling Decision (choose_sample_or_full)**
+
+* **Functionality:** Offers an interactive choice to reduce dataset size for rapid prototyping and testing.
+* **Logic:**
+* * **Full Processing:** If selected, processes all ~8.4 million records.
+* * **Random Sampling:** If selected (default), extracts a random subset of $N$ rows (default $N=5000$) using sample(n=n, random_state=42).
+* * **Reproducibility:** A fixed random seed ensures the sample remains consistent across different runs.
+<img src="ReadMe_Images/sample.png"></img>
+
+3. **Quality Assessment (assess_data_quality)**
 
 * **Functionality:** Performs a health check on the raw dataset.
 * **Metrics:** Calculates total memory usage (MB), identifies columns with missing values, and counts duplicate rows based on ID.
+<img src="ReadMe_Images/assess.png"></img>
 
-3. **Outlier Detection (detect_outliers_iqr)**
+4. **Outlier Detection (detect_outliers_iqr)**
 * **Method:** Interquartile Range (IQR).
 * **Logic:** Defines bounds as $[Q1 - 1.5 \times IQR, Q3 + 1.5 \times IQR]$.
 * **Action:** Iterates through all numeric columns (like X Coordinate) and prints a count of records falling outside these statistical bounds. 
+<img src="ReadMe_Images/outliers.png"></img>
 
-4. **Exploratory Data Analysis (EDA) (explore_data)**
+5. **Exploratory Data Analysis (EDA) (explore_data)**
 * **Functionality:** Generates statistical summaries to understand data distribution.
 * **Outputs:** Descriptive 
 * **Statistics:** Mean, Std, Min, Max for all numeric features.
 * **Categorical Summary:** Unique value counts for text columns.
 * **Correlation Matrix:** A Pearson correlation table showing relationships between numerical variables (e.g., correlation between Latitude and District).
 
-5. **Data Cleaning (clean_data)**
+<img src="ReadMe_Images/eda.png"></img>
+<img src="ReadMe_Images/eda2.png"></img>
+
+
+6. **Data Cleaning (clean_data)**
 
 * **Functionality:** Fixes structural errors in the dataset.
 * **Steps:**
@@ -190,58 +208,84 @@ Below is a detailed breakdown of each module's responsibility:
   * **Text Normalization**: Strips leading/trailing whitespace from strings.
   * **Date Parsing**: Converts the string Date column into datetime objects and extracts Year, Month, Day.
   * **Imputation:** Fills NaN values in "Ward" and "Community Area" with "UNKNOWN".
-
-6. **Feature Engineering (create_features)**
+<img src="ReadMe_Images/cleaning.png"></img>
+  
+7. **Feature Engineering (create_features)**
 * **Functionality:** Derives new predictive features from raw data.
 * **New Features:** Hour & DayOfWeek: Extracted from the parsed timestamp.
 * **DistanceFromCenter:** Calculates Euclidean distance from Chicago's center ($41.8781, -87.6298$).
 * **IsViolent:** Binary flag (1/0) checking if PrimaryType contains keywords like "HOMICIDE", "BATTERY", or "ASSAULT".
+<img src="ReadMe_Images/featurengineering.png"></img>
 
-7. **Data Filtering (remove_incorrect_values)**
+8. **Data Filtering (remove_incorrect_values)**
 * **Functionality:** Removes logically impossible data points after feature creation.
 * **Rules:**
 * * Latitude must be $[-90, 90]$.
 * * Longitude must be $[-180, 180]$.
 * * Year must be between $1990$ and $2030$.
 * * DistanceFromCenter must be non-negative.
+<img src="ReadMe_Images/incorrect.png"></img>
 
-8. **Normalization (normalize_numeric_minmax)**
+9. **Normalization (normalize_numeric_minmax)**
 
 * **Method:** MinMax Scaling.
 * **Logic:** Transforms numeric features (excluding targets/IDs) to the range $[0, 1]$ using the formula $X_{scaled} = \frac{X - X_{min}}{X_{max} - X_{min}}$.
+<img src="ReadMe_Images/normalization.png"></img>
 
-9. **Categorical Encoding (encode_categoricals)**
+10. **Categorical Encoding (encode_categoricals)**
 
 * **Method**: Label Encoding.
 * **Logic:** Converts low-cardinality categorical strings (unique values $\le 50$) into integer labels (e.g., "THEFT" $\rightarrow$ 4).
+<img src="ReadMe_Images/encoding.png"></img>
 
-10. **Aggregation (aggregate_monthly_and_type_counts)**
+11. **Aggregation (aggregate_monthly_and_type_counts)**
 
 * **Functionality:** Adds context to individual rows based on monthly trends.
 * **Features:**
 * * **MonthlyCrimeCount:** Total crimes occurring in that specific month/year.
 * * **TypeMonthlyCount:** Count of that specific crime type in that month.
+<img src="ReadMe_Images/aggregation.png"></img>
 
-11. **Discretization (discretize_numeric)**
+12. **Discretization (discretize_numeric)**
 
 * **Method:** Quantile Binning.
 * **Logic:** Uses KBinsDiscretizer to sort continuous variables into 5 equal-frequency bins (e.g., X Coordinate_bin).
-
-12. **Binarization (binarize_numeric)**
+<img src="ReadMe_Images/discretization.png"></img>
+13. **Binarization (binarize_numeric)**
 
 * **Method:** Median Thresholding.
 * **Logic:** Converts columns like Beat and District into binary (0/1) based on whether they are above the column's median value.
-
-13. **Feature Selection (select_feature_subset)**
+<img src="ReadMe_Images/binarization.png"></img>
+14. **Feature Selection (select_feature_subset)**
 
 * **Method:** Filter Method (ANOVA F-value).
 * **Logic:** Uses SelectKBest with f_classif to retain the top 20 features most strongly correlated with the Arrest target.
-
-14. **Dimensionality Reduction (apply_pca)**
+<img src="ReadMe_Images/selectfeatures.png"></img>
+15. **Dimensionality Reduction (apply_pca)**
 
 * **Method:** Principal Component Analysis (PCA).
 * **Logic:** Standardizes the data and projects it onto 3 orthogonal components (PCA_1, PCA_2, PCA_3) to reduce dimensionality while preserving variance.
+<img src="ReadMe_Images/pca.png"></img>
 
+16. **Reporting (generate_report)**
+
+* **Functionality:** Produces a final summary of the preprocessing pipeline to validate data integrity.
+* **Metrics:**
+  * **Data Shape Comparison:** Compares original vs. processed row/column counts to track data loss or feature expansion.
+  * **Memory Footprint:** Calculates the final memory usage in MB.
+  * **Hygiene Check:** Confirms that zero missing values and zero duplicates remain in the final dataset.
+  * **Statistical Snapshot:** Prints descriptive statistics (mean, std, min, max) for the transformed features.
+<img src="ReadMe_Images/generatereport1.png"></img>
+<img src="ReadMe_Images/generatereport2.png"></img>
+17. **Data Export (save_processed)**
+
+* Functionality: Persists the final, cleaned, and transformed dataframe to a file for use in downstream machine learning tasks.
+
+* Logic:
+  * Directory Management: Automatically creates the output directory (../processed_datasets) if it does not exist.
+  * Format Support: Supports saving as either .csv (default) or .xlsx (Excel), determined by the format parameter.
+  * Output: Generates the final file CrimesChicagoDatasetPreprocessed.csv.
+<img src="ReadMe_Images/export.png"></img>
 ---
 
 ## Technologies Used
@@ -345,122 +389,39 @@ ls unprocessed_datasets/ | head -5
 # Should show: Crimes_2001.csv, Crimes_2002.csv, etc.
 ```
 
-### Quick Start
+### Results
+Results
+The preprocessing pipeline successfully ingested and transformed 25 years of Chicago crime data. 
+Below is a detailed breakdown of the data transformation, quality improvements, and statistical findings.
+<img src="ReadMe_Images/results.png"></img>
 
-**Run sample preprocessing:**
-```bash
-cd processing_scripts
-python data_preprocessing.py
-```
+####  Data Quality Improvements
 
-**Expected output:**
-```
-Data loaded successfully: 10000 rows, 22 columns
-Dataset shape: (10000, 22)
-Missing values: 850
-Duplicates: 234
-...
-Processed data saved to: ../processed_datasets/crimes_2024_processed.csv
-```
+**Cleaning:** The pipeline identified and removed 93,324 rows containing invalid data. This included records with missing coordinates (Latitude/Longitude), invalid dates, or location data falling outside Chicago's geographic boundaries.
 
----
+**Outlier Detection:** Using the Interquartile Range (IQR) method, the script flagged approximately 40,265 outliers in the X Coordinate and Longitude features. These represent crimes occurring in geographically sparse or extreme areas relative to the city center distributions.
+
+**Imputation:** High-missingness columns like Ward (~7.3% missing) and Community Area (~7.3% missing) were successfully handled, ensuring zero null values in the final output.
+
+####  Feature Engineering and Dimensionality Reduction Results
 
 
-## Results
-
-### Processing Statistics
-
-**Dataset Characteristics:**
-- **Original records:** ~300,000 per year
-- **Years covered:** 2001-2025 (25 years)
-- **Total available records:** ~7.5 million+
-
-**Sample Processing (Crimes_2024.csv):**
-```
-Original: 300,000 rows × 22 columns
-After sampling: 5,000 rows × 22 columns
-After feature engineering: 5,000 rows × 57 columns
-After feature selection: 5,000 rows × 10 columns
-
-Processing time: ~45 seconds
-Memory usage: 2.8 MB → 1.2 MB (optimized)
-```
-
-### Data Quality Improvements
-
-**Before Processing:**
-- Missing values: 5-10% (esp. in location columns)
-- Duplicates: 2-3%
-- Inconsistent formats: Text case, whitespace
-- Outliers: ~15-20% statistical outliers
-
-**After Processing:**
-- Missing values: 0% (imputed)
-- Duplicates: 0% (removed)
-- Standardized: All text uppercase, trimmed
-- Outliers: Handled (Z-score threshold = 3)
-
-### Feature Engineering Results
-
-**Original Features:** 22
-```
-ID, Case Number, Date, Block, IUCR, Primary Type, Description, 
-Location Description, Arrest, Domestic, Beat, District, Ward, 
-Community Area, FBI Code, X Coordinate, Y Coordinate, Year, 
-Updated On, Latitude, Longitude, Location
-```
-
-**Engineered Features:** 35+ additional features
-```
-Temporal (7): Date_year, Date_month, Date_day, Date_hour, 
-              Date_dayofweek, Date_quarter, Date_is_weekend
-
-Spatial (1): distance_from_reference
-
-Interactions (2+): Ward_multiply_District, Latitude_add_Longitude
-
-Aggregations (3+): Ward_mean_by_District, District_count_by_PrimaryType
-
-Transformations (6+): X_Coordinate_log, Y_Coordinate_log, 
-                      Ward_sqrt, District_sqrt
-
-Encoding (2+): Primary_Type_frequency, Location_Description_frequency
-
-Discretized (3+): Ward_binned, District_equal_width, CommunityArea_kmeans
-
-Binary (3+): Ward_binary, District_binary, Arrest (original)
-```
-
-**Total Features:** 57+
-
-### Aggregation Results
-
-**Temporal Aggregation:**
-- Daily data → Monthly summaries (365:12 ratio)
-- ~97% data reduction while preserving trends
-
-**Spatial Aggregation:**
-- Grid size 0.01° → ~500 grid cells
-- Original 300K records → 500 spatial cells
-- ~99.8% reduction for spatial analysis
-
-**Categorical Aggregation:**
-- 30+ crime types identified
-- Top 5 types: THEFT, BATTERY, CRIMINAL DAMAGE, ASSAULT, DECEPTIVE PRACTICE
-- District-level patterns identified
-
-### Performance Metrics
-
-| Operation | Original Size | Final Size | Reduction | Time |
-|-----------|--------------|------------|-----------|------|
-| Random Sampling | 300K | 10K | 96.7% | 2s |
-| Stratified Sampling | 300K | 10K | 96.7% | 5s |
-| Temporal Aggregation | 300K | 365 | 99.9% | 3s |
-| Spatial Aggregation | 300K | 500 | 99.8% | 8s |
-| Feature Engineering | 22 cols | 57 cols | +159% | 10s |
-| PCA Reduction | 57 cols | 10 cols | 82.5% | 5s |
-
----
+#### **Feature Engineering**
+The pipeline expanded the dataset's analytical power by generating 16 new features while simultaneously reducing complexity using PCA.
+  * **Temporal Features:** Extracted Hour and DayOfWeek to capture temporal crime patterns.
+  * **Spatial Features:** Calculated DistanceFromCenter to correlate crime frequency with proximity to the city center.
+  
+#### **Dimensionality Reduction (PCA)**
+  * Applied Principal Component Analysis to the numeric features.
+  * **Result:** The top 3 Principal Components captured 74.59% of the total variance in the dataset. This allows for efficient modeling with fewer variables while retaining the majority of the information.
+  
+#### **Feature Selection**
+* Using SelectKBest with the f_classif scoring function, the pipeline isolated the top 20 features most strongly correlated with the Arrest target variable. 
+* Key selected features included:
+  *** Derived:** IsViolent, Hour, DistanceFromCenter
+  * **Transformed:** PrimaryType_encoded, MonthlyCrimeCount, PCA_1
+  * **Original:** X Coordinate, Location Description, Year
+  
 
 ## Key Takeaways
 
