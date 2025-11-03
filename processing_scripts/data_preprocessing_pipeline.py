@@ -225,7 +225,6 @@ class DataPreprocessor:
         self.data = self.data[keep_cols].copy()
         print(f"Selected features: {chosen}")
         return chosen
-    # ---------- Aggregation ----------
 
     # ---------- Aggregation ----------
     def aggregate_monthly_and_type_counts(self):
@@ -418,10 +417,10 @@ def main(force_full=False, sample_n=5000):
         if pre.data['Arrest'].dtype in [np.int64, np.int32, 'int64', 'int32']:
             target = 'Arrest'
 
-    selected = pre.select_feature_subset(target_column=target, k=20)
     pre.aggregate_monthly_and_type_counts()
     disc_cols = pre.discretize_numeric(numeric_cols=None, n_bins=5, strategy='quantile')
     bin_cols = pre.binarize_numeric()
+    selected = pre.select_feature_subset(target_column=target, k=20)
     numeric_for_pca = [
         c for c in pre.data.select_dtypes(include=[np.number]).columns
         if c not in ['ID', 'CaseNumber', 'RecordID', 'Year', 'Month', 'Day', 'Hour', 'DayOfWeek', 'Arrest', 'Domestic', 'IsViolent']
