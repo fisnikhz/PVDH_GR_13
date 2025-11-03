@@ -47,18 +47,10 @@ The project demonstrates advanced data science techniques including cleaning, fe
 - Perform statistical analysis and aggregation
 - Handle large-scale real-world datasets
 
-### What This Repository Contains
+### Repository Structure
 This is a **data preparation project** that implements various preprocessing, transformation, and analysis techniques on Chicago crime data spanning 25 years (2001-2025). The repository includes:
 
-- **Modular Python scripts** for different data processing tasks
-- **25 unprocessed CSV files** containing raw crime data by year
-- **Processed datasets** with cleaned and transformed data
-- **Comprehensive documentation** of all implemented techniques
-- **Example workflows** demonstrating how to use each module
 
----
-
-## Repository Structure
 
 ```
 PVDH_GR_13/
@@ -111,9 +103,7 @@ PVDH_GR_13/
 
 ---
 
-## Dataset Description
-
-### Source
+### Dataset Source
 **Chicago Crime Data** - Official crime reports from the City of Chicago Police Department
 
 ### Characteristics
