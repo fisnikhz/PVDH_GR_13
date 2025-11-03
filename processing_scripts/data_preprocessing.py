@@ -113,6 +113,20 @@ class DataPreprocessor:
         print(f"Created {len(created_features)} new features: {created_features}")
         return created_features
 
+    def detect_outliers(self):
+        """Placeholder for numeric outlier detection logic.
+
+        This will later be expanded to support multiple detection
+        strategies (e.g. IQR and z-score) and optional removal.
+        Currently, it just returns the data unchanged.
+        """
+        if self.data is None:
+            print("No data loaded for outlier detection.")
+            return None
+
+        print("Outlier detection not yet implemented — data unchanged.")
+        return self.data
+
     def clean_data(self):
         duplicates_before = self.data.duplicated().sum()
         self.data.drop_duplicates(inplace=True)
