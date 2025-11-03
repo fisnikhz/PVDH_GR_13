@@ -229,7 +229,7 @@ class DataPreprocessor:
 def main():
     preprocessor = DataPreprocessor()
 
-    data_file = "../unprocessed_datasets/Crimes_2024.csv"
+    data_file = "../processed_datasets/integrated_data.csv"
     preprocessor.load_data(data_file)
 
     if preprocessor.data is not None:
@@ -244,7 +244,7 @@ def main():
         preprocessor.reduce_dimensionality(n_components=3)
         report = preprocessor.generate_report()
 
-        output_file = "../processed_datasets/crimes_2024_processed.csv"
+        output_file = "../processed_datasets/CrimesChicagoDatasetPreprocessedSample.csv"
         preprocessor.data.to_csv(output_file, index=False)
         print(f"\nProcessed data saved to: {output_file}")
 
