@@ -16,6 +16,10 @@ class DataPreprocessor:
         self.data = None
         self.original_data = None
         self.scaler = None
+        # Basic configuration for upcoming outlier detection
+        self.outlier_method = "zscore"  # or "iqr"
+        self.outlier_zscore_threshold = 3.0
+        self.outlier_iqr_factor = 1.5
 
     def load_data(self, file_path):
         try:
