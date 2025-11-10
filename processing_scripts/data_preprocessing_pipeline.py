@@ -46,7 +46,7 @@ class DataPreprocessor:
             f"Process full dataset ({len(self.data)} rows) or sample {sample_n} rows? [full/sample] (default sample): ").strip().lower()
         if choice in ["full", "f", "no", "n"]:
             print("Processing full dataset.")
-            return  # leave self.data intact
+            return
         else:
             n = min(sample_n, len(self.data))
             self.data = self.data.sample(n=n, random_state=42).reset_index(drop=True)
@@ -73,6 +73,17 @@ class DataPreprocessor:
         print(f"\nDuplicates: {duplicates} rows ({duplicates / len(self.data) * 100:.2f}%)")
         return missing_df
 
+    # Remove incorrect values
+    # def remove_incorrect_values(self):
+    #
+    # # Outlier Detection (IQR)
+    #
+    # def detect_outliers_iqr(self, multiplier=1.5):
+    #
+    # # Exploratory Data Analysis (EDA)
+    #
+    # def explore_data(self):
+
     # ---------- Cleaning ----------
     def clean_data(self):
 
@@ -81,10 +92,8 @@ class DataPreprocessor:
         duplicates_after = self.data.duplicated().sum()
         print(f"Duplicates removed: {duplicates_before} -> {duplicates_after}")
 
-        # Standardize text columns: strip and uppercase
         text_cols = self.data.select_dtypes(include=['object']).columns
         for col in text_cols:
-            # avoid converting big text blobs unintentionally
             try:
                 self.data[col] = self.data[col].astype(str).str.strip()
             except Exception:
@@ -98,6 +107,7 @@ class DataPreprocessor:
                 self.data['Month'] = self.data['Date_parsed'].dt.month
             if 'Day' not in self.data.columns:
                 self.data['Day'] = self.data['Date_parsed'].dt.day
+
         for col in ["Ward", "Community Area"]:
             if col in self.data.columns:
                 self.data[col] = self.data[col].fillna("UNKNOWN").astype(str)
@@ -229,7 +239,6 @@ class DataPreprocessor:
     # ---------- Aggregation ----------
     def aggregate_monthly_and_type_counts(self):
         if 'Year' not in self.data.columns or 'Month' not in self.data.columns:
-            # try to extract from Date_parsed
             if 'Date_parsed' in self.data.columns:
                 self.data['Year'] = self.data['Date_parsed'].dt.year
                 self.data['Month'] = self.data['Date_parsed'].dt.month
@@ -333,7 +342,6 @@ class DataPreprocessor:
         print(f"Processed data: {self.data.shape[0]:,} rows, {self.data.shape[1]:,} columns")
         print(f"Memory usage: {self.data.memory_usage(deep=True).sum() / 1024 ** 2:.2f} MB")
 
-        # Missing values
         missing_df = self.data.isnull().sum().reset_index()
         missing_df.columns = ['Column', 'MissingCount']
         missing_df['MissingPercent'] = (missing_df['MissingCount'] / len(self.data) * 100).round(2)
@@ -371,6 +379,7 @@ class DataPreprocessor:
             'categorical_columns': cat_cols
         }
         return summary
+
     # ---------- SAVE NEW DATASET ----------
     def save_processed(self, filename="CrimesChicagoDatasetPreprocessed", format='csv'):
         os.makedirs(self.processed_dir, exist_ok=True)
@@ -380,17 +389,19 @@ class DataPreprocessor:
             outpath += '.xlsx'
             self.data.to_excel(outpath, index=False)
         else:
-            # default to CSV
             outpath += '.csv'
             self.data.to_csv(outpath, index=False)
 
         print(f"Processed data saved to: {outpath}")
         return outpath
+
+
 def main(force_full=False, sample_n=5000):
     pre = DataPreprocessor(
         unprocessed_dir="../unprocessed_datasets",
         processed_dir="../processed_datasets"
     )
+
     try:
         pre.integrate_unprocessed_csvs(pattern="*.csv")
     except Exception as e:
@@ -406,10 +417,14 @@ def main(force_full=False, sample_n=5000):
             print("Sample selection skipped, proceeding with full dataset.")
 
     pre.assess_data_quality()
+
+
     pre.clean_data()
     pre.create_features()
+
     numeric_cols = pre.normalize_numeric_minmax()
     pre.encode_categoricals(max_unique_for_label=50)
+
     target = None
     if 'Arrest' in pre.data.columns:
         if pre.data['Arrest'].dtype == bool:
@@ -418,9 +433,12 @@ def main(force_full=False, sample_n=5000):
             target = 'Arrest'
 
     pre.aggregate_monthly_and_type_counts()
+
     disc_cols = pre.discretize_numeric(numeric_cols=None, n_bins=5, strategy='quantile')
     bin_cols = pre.binarize_numeric()
+
     selected = pre.select_feature_subset(target_column=target, k=20)
+
     numeric_for_pca = [
         c for c in pre.data.select_dtypes(include=[np.number]).columns
         if c not in ['ID', 'CaseNumber', 'RecordID', 'Year', 'Month', 'Day', 'Hour', 'DayOfWeek', 'Arrest', 'Domestic', 'IsViolent']
@@ -434,6 +452,6 @@ def main(force_full=False, sample_n=5000):
 
     return pre
 
+
 if __name__ == "__main__":
     preprocessor = main()
-
