@@ -102,9 +102,7 @@ PVDH_GR_13/
 - Includes example usage in `main()` functions
 
 ---
-
-### Dataset Source
-**Chicago Crime Data** - Official crime reports from the City of Chicago Police Department
+## Dataset Description
 
 ### Data Attributes (22 columns)
 
@@ -158,6 +156,31 @@ This project implements a comprehensive data processing workflow consisting of m
 
 
 ## Implemented Modules
+The **DataPreprocessor** class in the **data_preprocessing_pipeline.py** orchestrates the entire pipeline. 
+Below is a detailed breakdown of each module's responsibility:
+
+1. **Data Integration (integrate_unprocessed_csvs)**
+
+* **Functionality:** Iteratively loads all CSV files matching the pattern (e.g., Crimes_20*.csv) from the input directory.
+* **Logic:** Uses pd.read_csv(low_memory=False) to prevent type inference errors and appends a source_file column to track the origin year of each record.
+* **Output:** A single concatenated DataFrame containing all historical data. 
+
+2. **Quality Assessment (assess_data_quality)**
+
+* **Functionality:** Performs a health check on the raw dataset.
+* **Metrics:** Calculates total memory usage (MB), identifies columns with missing values, and counts duplicate rows based on ID.
+
+3. **Outlier Detection (detect_outliers_iqr)**
+* **Method:** Interquartile Range (IQR).
+* **Logic:** Defines bounds as $[Q1 - 1.5 \times IQR, Q3 + 1.5 \times IQR]$.
+* **Action:** Iterates through all numeric columns (like X Coordinate) and prints a count of records falling outside these statistical bounds. 
+
+4. **Exploratory Data Analysis (EDA) (explore_data)**
+* **Functionality:** Generates statistical summaries to understand data distribution.
+* **Outputs:** Descriptive 
+* **Statistics:** Mean, Std, Min, Max for all numeric features.
+* **Categorical Summary:** Unique value counts for text columns.
+* **Correlation Matrix:** A Pearson correlation table showing relationships between numerical variables (e.g., correlation between Latitude and District).
 
 ---
 
