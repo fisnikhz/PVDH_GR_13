@@ -37,7 +37,8 @@
 
 ## Project Overview
 
-This repository contains a comprehensive **data preparation** project focused on the **Chicago Crime Dataset** (2001-2025). The project demonstrates advanced data science techniques including data cleaning, feature engineering, aggregation, sampling, scaling, and dimensionality reduction.
+This repository implements a comprehensive data preparation pipeline for the **Chicago Crimes from 2001 to Present Dataset**. 
+The project demonstrates advanced data science techniques including cleaning, feature engineering, aggregation, sampling, scaling, and dimensionality reduction to transform raw historical data into analysis-ready formats.
 
 ### Project Goals
 - Implement end-to-end data preprocessing pipelines
@@ -45,7 +46,6 @@ This repository contains a comprehensive **data preparation** project focused on
 - Demonstrate multiple data transformation strategies
 - Perform statistical analysis and aggregation
 - Handle large-scale real-world datasets
-- Create reusable and modular processing scripts
 
 ### What This Repository Contains
 This is a **data preparation project** that implements various preprocessing, transformation, and analysis techniques on Chicago crime data spanning 25 years (2001-2025). The repository includes:
@@ -63,30 +63,30 @@ This is a **data preparation project** that implements various preprocessing, tr
 ```
 PVDH_GR_13/
 │
-├── unprocessed_datasets/            # Raw crime data (2001-2025)
-│   ├── Crimes_2001.csv             # ~300K+ records per file
+├── unprocessed_datasets/                # Raw crime data (2001-2025)
+│   ├── Crimes_2001.csv                  # ~300K+ records per file
 │   ├── Crimes_2002.csv
 │   ├── ...
 │   └── Crimes_2025.csv
 │
-├── processed_datasets/              # Cleaned and transformed data
-│   └── crimes_2024_processed.csv   # Sample processed output
+├── processed_datasets/                  # Cleaned and transformed data
+│   └── crimes_2024_processed.csv        # Sample processed output
 │
-├── processing_scripts/              # Modular data processing scripts
-│   ├── data_cleaning.py            # Cleaning and quality improvement
-│   ├── data_integration.py         # Multi-file integration and merging
-│   ├── data_preprocessing.py       # General preprocessing functions
-│   ├── data_preprocessing_pipeline.py # Main pipeline orchestrating all steps
-│   ├── data_aggregation.py         # Temporal/spatial/categorical aggregation
-│   ├── feature_engineering.py      # Feature creation and transformation
-│   ├── feature_subset_selection.py # Feature selection algorithms
-│   ├── data_scaling.py             # Normalization and scaling
-│   ├── sampling_techniques.py      # Random, systematic, stratified sampling
-│   └── discretization_binarization.py # Binning and binarization
+├── processing_scripts/                  # Modular data processing scripts
+│   ├── data_cleaning.py                 # Cleaning and quality improvement
+│   ├── data_integration.py              # Multi-file integration and merging
+│   ├── data_preprocessing.py            # General preprocessing functions
+│   ├── data_preprocessing_pipeline.py   # Main pipeline orchestrating all steps
+│   ├── data_aggregation.py              # Temporal/spatial/categorical aggregation
+│   ├── feature_engineering.py           # Feature creation and transformation
+│   ├── feature_subset_selection.py      # Feature selection algorithms
+│   ├── data_scaling.py                  # Normalization and scaling
+│   ├── sampling_techniques.py           # Random, systematic, stratified sampling
+│   └── discretization_binarization.py   # Binning and binarization
 │
-├── LICENSE                          # MIT License
-├── README.md                        # Project documentation
-└── .gitignore                       # Git ignore rules
+├── LICENSE                              # MIT License
+├── README.md                            # Project documentation
+└── .gitignore                           # Git ignore rules
 ```
 
 ### Directory Breakdown
@@ -103,9 +103,10 @@ PVDH_GR_13/
 - Example: `crimes_2024_processed.csv` (preprocessed 2024 data)
 
 **`processing_scripts/`**
-- 9 Python modules implementing different data processing techniques
+- Python modules implementing different data processing techniques
 - Each module is self-contained and reusable
 - Can be used independently or as part of a pipeline
+- 2 Preprocessing pipeline scripts implementing different flows
 - Includes example usage in `main()` functions
 
 ---
