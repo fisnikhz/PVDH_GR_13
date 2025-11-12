@@ -418,6 +418,9 @@ def main(force_full=False, sample_n=5000):
 
     pre.assess_data_quality()
 
+    pre.remove_incorrect_values()
+    pre.detect_outliers_iqr()
+    pre.explore_data()
 
     pre.clean_data()
     pre.create_features()
