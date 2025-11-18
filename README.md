@@ -95,7 +95,7 @@ PVDH_GR_13/
 - Contains 25 CSV files (Crimes_2001.csv through Crimes_2025.csv)
 - Raw data from Chicago crime database
 - Each file contains 100K-400K crime records
-- Total dataset size: ~7.5 million+ crime records
+- Total dataset size: ~8.4 million+ crime records
 
 **`processed_datasets/`**
 - Output directory for cleaned and processed data
@@ -156,112 +156,27 @@ ID,Case Number,Date,Block,IUCR,Primary Type,Description,Location Description,Arr
 ```
 ---
 
-## Data Processing Workflow
+## Data Processing Modules
 
 This project implements a comprehensive data processing workflow consisting of multiple stages:
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     DATA PROCESSING WORKFLOW                        │
-└─────────────────────────────────────────────────────────────────────┘
+| **Step** | **Stage**                    | **Description**                                    | **Key Actions**                                                                                                                                                                                           | **Module**                       |
+| -------- | ---------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **1**    | **Data Collection**          | Load raw CSV crime datasets                        | - 25 years (2001–2025) <br> - ~300K records per year                                                                                                                                                      | —                                |
+| **2**    | **Data Integration**         | Merge multiple yearly files into a unified dataset | - Combine datasets <br> - Add source tracking column <br> - Handle missing file errors                                                                                                                    | `data_integration.py`            |
+| **3**    | **Data Quality Assessment**  | Analyze quality of raw data                        | - Missing value % <br> - Duplicate detection <br> - Memory usage analysis <br> - Generate reports                                                                                                         | `data_preprocessing.py`          |
+| **4**    | **Data Cleaning**            | Clean and standardize dataset                      | - Standardize column names <br> - Remove duplicates (2–3%) <br> - Handle missing values (5–10%) <br> - Outlier removal (Z-score) <br> - Normalize text                                                    | `data_cleaning.py`               |
+| **5**    | **Data Type Conversion**     | Optimize memory and type usage                     | - Convert dates to datetime <br> - Convert boolean fields <br> - Optimize numerics (int32/float32)                                                                                                        | `data_preprocessing.py`          |
+| **6**    | **Feature Engineering**      | Create new meaningful features                     | **Temporal:** hour, month, quarter, is_weekend <br> **Spatial:** grid, distance_from_center <br> **Interaction:** feature combos <br> **Math:** log, sqrt, polynomial <br> **Encoding:** label, frequency | `feature_engineering.py`         |
+| **7**    | **Data Transformation**      | Transform continuous and numerical data            | **Discretization:** equal-width, equal-frequency, k-means, custom <br> **Binarization:** threshold-based                                                                                                  | `discretization_binarization.py` |
+| **8**    | **Feature Selection**        | Reduce feature set to most important variables     | - SelectKBest <br> - RFE <br> - Random Forest feature importance                                                                                                                                          | `feature_subset_selection.py`    |
+| **9**    | **Data Scaling**             | Normalize numeric features                         | - StandardScaler (Z-score) <br> - MinMaxScaler (0–1)                                                                                                                                                      | `data_scaling.py`                |
+| **10**   | **Sampling**                 | Reduce dataset size when needed                    | - Random <br> - Systematic <br> - Stratified <br> - Percentage-based sampling                                                                                                                             | `sampling_techniques.py`         |
+| **11**   | **Aggregation**              | Summarize data at different granularities          | **Temporal:** daily, monthly, yearly <br> **Spatial:** grid-based <br> **Categorical:** crime type, location <br> **Stats:** count, mean, sum, std                                                        | `aggregation.py`                 |
+| **12**   | **Dimensionality Reduction** | Reduce feature dimensionality                      | - PCA <br> - Variance analysis                                                                                                                                                                            | `data_preprocessing.py`          |
+| **13**   | **Export Processed Data**    | Save final cleaned dataset                         | - Export to CSV <br> - Document all transformations                                                                                                                                                       | —                                |
 
-1. DATA COLLECTION
-   └─→ Load raw CSV files from unprocessed_datasets/
-       - 25 years of crime data (2001-2025)
-       - ~300K records per year
-       
-2. DATA INTEGRATION
-   └─→ Merge multiple files
-       - Combine datasets from different years
-       - Add source tracking columns
-       - Handle file loading errors
-       [Module: data_integration.py]
 
-3. DATA QUALITY ASSESSMENT
-   └─→ Analyze data quality
-       - Check missing values (%)
-       - Identify duplicates
-       - Assess memory usage
-       - Generate quality reports
-       [Module: data_preprocessing.py]
-
-4. DATA CLEANING
-   └─→ Clean and standardize
-       - Standardize column names
-       - Remove duplicates (~2-3%)
-       - Handle missing values (~5-10%)
-       - Remove outliers (Z-score method)
-       - Normalize text data
-       [Module: data_cleaning.py]
-
-5. DATA TYPE CONVERSION
-   └─→ Optimize data types
-       - Convert dates to datetime
-       - Convert booleans
-       - Optimize numeric types (int32, float32)
-       [Module: data_preprocessing.py]
-
-6. FEATURE ENGINEERING
-   └─→ Create derived features
-       - Temporal: hour, day, month, quarter, is_weekend
-       - Spatial: distance_from_center, grid_location
-       - Interaction: feature combinations
-       - Aggregation: group-based statistics
-       - Mathematical: log, sqrt, polynomial
-       - Encoding: frequency, label encoding
-       [Module: feature_engineering.py]
-
-7. DATA TRANSFORMATION
-   └─→ Transform continuous variables
-       - Discretization (binning)
-         • Equal-width bins
-         • Equal-frequency (quantiles)
-         • K-means clustering
-         • Custom bins
-       - Binarization (threshold-based)
-       [Module: discretization_binarization.py]
-
-8. FEATURE SELECTION
-   └─→ Select relevant features
-       - SelectKBest (statistical)
-       - RFE (recursive elimination)
-       - Random Forest importance
-       [Module: feature_subset_selection.py]
-
-9. DATA SCALING
-   └─→ Normalize numeric features
-       - StandardScaler (Z-score)
-       - MinMaxScaler (0-1 range)
-       [Module: data_scaling.py]
-
-10. SAMPLING
-    └─→ Reduce dataset size
-        - Random sampling
-        - Systematic sampling
-        - Stratified sampling
-        - Percentage-based sampling
-        [Module: sampling_techniques.py]
-
-11. AGGREGATION
-    └─→ Summarize and group data
-        - Temporal: daily, monthly, yearly
-        - Spatial: grid-based aggregation
-        - Categorical: crime type, location
-        - Statistical: count, mean, sum, std
-        [Module: aggregation.py]
-
-12. DIMENSIONALITY REDUCTION
-    └─→ Reduce feature space
-        - PCA (Principal Component Analysis)
-        - Variance preservation analysis
-        [Module: data_preprocessing.py]
-
-13. EXPORT PROCESSED DATA
-    └─→ Save to processed_datasets/
-        - CSV format
-        - Documented transformations
-        - Ready for analysis/modeling
-```
 
 ## Implemented Modules
 
