@@ -182,6 +182,34 @@ Below is a detailed breakdown of each module's responsibility:
 * **Categorical Summary:** Unique value counts for text columns.
 * **Correlation Matrix:** A Pearson correlation table showing relationships between numerical variables (e.g., correlation between Latitude and District).
 
+5. **Data Cleaning (clean_data)**
+
+* **Functionality:** Fixes structural errors in the dataset.
+* **Steps:**
+  * **Deduplication:** Removes exact duplicate records.
+  * **Text Normalization**: Strips leading/trailing whitespace from strings.
+  * **Date Parsing**: Converts the string Date column into datetime objects and extracts Year, Month, Day.
+  * **Imputation:** Fills NaN values in "Ward" and "Community Area" with "UNKNOWN".
+
+6. **Feature Engineering (create_features)**
+* **Functionality:** Derives new predictive features from raw data.
+* **New Features:** Hour & DayOfWeek: Extracted from the parsed timestamp.
+* **DistanceFromCenter:** Calculates Euclidean distance from Chicago's center ($41.8781, -87.6298$).
+* **IsViolent:** Binary flag (1/0) checking if PrimaryType contains keywords like "HOMICIDE", "BATTERY", or "ASSAULT".
+
+7. **Data Filtering (remove_incorrect_values)**
+* **Functionality:** Removes logically impossible data points after feature creation.
+* **Rules:**
+* * Latitude must be $[-90, 90]$.
+* * Longitude must be $[-180, 180]$.
+* * Year must be between $1990$ and $2030$.
+* * DistanceFromCenter must be non-negative.
+
+8. **Normalization (normalize_numeric_minmax)**
+
+* **Method:** MinMax Scaling.
+* **Logic:** Transforms numeric features (excluding targets/IDs) to the range $[0, 1]$ using the formula $X_{scaled} = \frac{X - X_{min}}{X_{max} - X_{min}}$.
+
 ---
 
 ## Technologies Used
