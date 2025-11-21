@@ -210,6 +210,38 @@ Below is a detailed breakdown of each module's responsibility:
 * **Method:** MinMax Scaling.
 * **Logic:** Transforms numeric features (excluding targets/IDs) to the range $[0, 1]$ using the formula $X_{scaled} = \frac{X - X_{min}}{X_{max} - X_{min}}$.
 
+9. **Categorical Encoding (encode_categoricals)**
+
+* **Method**: Label Encoding.
+* **Logic:** Converts low-cardinality categorical strings (unique values $\le 50$) into integer labels (e.g., "THEFT" $\rightarrow$ 4).
+
+10. **Aggregation (aggregate_monthly_and_type_counts)**
+
+* **Functionality:** Adds context to individual rows based on monthly trends.
+* **Features:**
+* * **MonthlyCrimeCount:** Total crimes occurring in that specific month/year.
+* * **TypeMonthlyCount:** Count of that specific crime type in that month.
+
+11. **Discretization (discretize_numeric)**
+
+* **Method:** Quantile Binning.
+* **Logic:** Uses KBinsDiscretizer to sort continuous variables into 5 equal-frequency bins (e.g., X Coordinate_bin).
+
+12. **Binarization (binarize_numeric)**
+
+* **Method:** Median Thresholding.
+* **Logic:** Converts columns like Beat and District into binary (0/1) based on whether they are above the column's median value.
+
+13. **Feature Selection (select_feature_subset)**
+
+* **Method:** Filter Method (ANOVA F-value).
+* **Logic:** Uses SelectKBest with f_classif to retain the top 20 features most strongly correlated with the Arrest target.
+
+14. **Dimensionality Reduction (apply_pca)**
+
+* **Method:** Principal Component Analysis (PCA).
+* **Logic:** Standardizes the data and projects it onto 3 orthogonal components (PCA_1, PCA_2, PCA_3) to reduce dimensionality while preserving variance.
+
 ---
 
 ## Technologies Used
