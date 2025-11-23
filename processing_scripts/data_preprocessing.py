@@ -1,36 +1,63 @@
+import os
+import glob
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelEncoder
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelEncoder, KBinsDiscretizer
 from sklearn.decomposition import PCA
-from sklearn.feature_selection import SelectKBest, chi2, f_classif
+from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.impute import SimpleImputer
 import warnings
-
 warnings.filterwarnings('ignore')
 
-#gh sample preprocessing
+
 class DataPreprocessor:
-    def __init__(self):
+    def __init__(self, unprocessed_dir="../unprocessed_datasets", processed_dir="../processed_datasets", plots_dir="plots"):
+        self.unprocessed_dir = unprocessed_dir
+        self.processed_dir = processed_dir
+        self.plots_dir = plots_dir
+        os.makedirs(self.plots_dir, exist_ok=True)
         self.data = None
         self.original_data = None
         self.scaler = None
-        # Basic configuration for upcoming outlier detection
-        self.outlier_method = "zscore"  # or "iqr"
-        self.outlier_zscore_threshold = 3.0
-        self.outlier_iqr_factor = 1.5
+        self._feature_selector_external = None
 
-    def load_data(self, file_path):
-        try:
-            self.data = pd.read_csv(file_path)
-            self.original_data = self.data.copy()
-            print(f"Data loaded successfully: {self.data.shape[0]} rows, {self.data.shape[1]} columns")
-            return self.data
-        except Exception as e:
-            print(f"Error loading data: {e}")
-            return None
+    # ---------- Integration ----------
+    def integrate_unprocessed_csvs(self, pattern="*.csv"):
+        file_glob = os.path.join(self.unprocessed_dir, pattern)
+        files = sorted(glob.glob(file_glob))
+        if not files:
+            raise FileNotFoundError(f"No CSV files found in {self.unprocessed_dir} with pattern {pattern}")
 
+        df_list = []
+        for f in files:
+            try:
+                print(f"Loading {f} ...")
+                df = pd.read_csv(f, low_memory=False)
+                df['source_file'] = os.path.basename(f)
+                df_list.append(df)
+            except Exception as e:
+                print(f"Warning: could not read {f}: {e}")
+
+        self.data = pd.concat(df_list, axis=0, ignore_index=True)
+        self.original_data = self.data.copy()
+        print(f"Integrated {len(files)} files -> {self.data.shape[0]} rows, {self.data.shape[1]} columns")
+        return self.data
+
+    # ---------- Sampling decision ----------
+    def choose_sample_or_full(self, sample_n=5000):
+        choice = input(
+            f"Process full dataset ({len(self.data)} rows) or sample {sample_n} rows? [full/sample] (default sample): ").strip().lower()
+        if choice in ["full", "f", "no", "n"]:
+            print("Processing full dataset.")
+            return
+        else:
+            n = min(sample_n, len(self.data))
+            self.data = self.data.sample(n=n, random_state=42).reset_index(drop=True)
+            print(f"Sampled {n} rows (random).")
+
+    # ---------- Assessment ----------
     def assess_data_quality(self):
         print(f"Dataset shape: {self.data.shape}")
         print(f"Memory usage: {self.data.memory_usage(deep=True).sum() / 1024 ** 2:.2f} MB")
@@ -44,93 +71,106 @@ class DataPreprocessor:
             'Percentage': missing_percent.values
         }).sort_values('Missing Values', ascending=False)
 
-        print("\nMissing values:")
-        print(missing_df[missing_df['Missing Values'] > 0])
+        print("\nMissing values (top):")
+        print(missing_df[missing_df['Missing Values'] > 0].head(20))
 
         duplicates = self.data.duplicated().sum()
         print(f"\nDuplicates: {duplicates} rows ({duplicates / len(self.data) * 100:.2f}%)")
-
         return missing_df
 
-    def handle_missing_values(self, strategy='mean'):
-        missing_before = self.data.isnull().sum().sum()
-        print(f"Missing values before: {missing_before}")
+    # ---------- Remove incorrect values ----------
+    def remove_incorrect_values(self):
+        before = len(self.data)
 
+        if 'Latitude' in self.data.columns:
+            self.data = self.data[(self.data['Latitude'] >= -90) & (self.data['Latitude'] <= 90)]
+        if 'Longitude' in self.data.columns:
+            self.data = self.data[(self.data['Longitude'] >= -180) & (self.data['Longitude'] <= 180)]
+
+        if 'Year' in self.data.columns:
+            self.data = self.data[self.data['Year'].between(1990, 2030)]
+        if 'Month' in self.data.columns:
+            self.data = self.data[self.data['Month'].between(1, 12)]
+        if 'Day' in self.data.columns:
+            self.data = self.data[self.data['Day'].between(1, 31)]
+
+        for col in self.data.select_dtypes(include=[np.number]).columns:
+            if "Distance" in col and self.data[col].min() < 0:
+                self.data = self.data[self.data[col] >= 0]
+
+        after = len(self.data)
+        print(f"\nIncorrect values removed: {before - after}")
+        return before - after
+
+    # ---------- Outlier detection ----------
+    def detect_outliers_iqr(self, multiplier=1.5, save_plots=True):
         numeric_cols = self.data.select_dtypes(include=[np.number]).columns
-        categorical_cols = self.data.select_dtypes(include=['object', 'category']).columns
+        outlier_summary = {}
+        for col in numeric_cols:
+            Q1 = self.data[col].quantile(0.25)
+            Q3 = self.data[col].quantile(0.75)
+            IQR = Q3 - Q1
 
-        if len(numeric_cols) > 0:
-            if strategy in ['mean', 'median']:
-                imputer = SimpleImputer(strategy=strategy)
-                self.data[numeric_cols] = imputer.fit_transform(self.data[numeric_cols])
+            lower = Q1 - multiplier * IQR
+            upper = Q3 + multiplier * IQR
+            mask = (self.data[col] < lower) | (self.data[col] > upper)
+            outlier_summary[col] = int(mask.sum())
 
-        if len(categorical_cols) > 0:
-            for col in categorical_cols:
-                if self.data[col].isnull().sum() > 0:
-                    mode_val = self.data[col].mode()
-                    if len(mode_val) > 0:
-                        self.data[col].fillna(mode_val[0], inplace=True)
+            if save_plots and mask.sum() > 0:
+                plt.figure(figsize=(6,4))
+                sns.boxplot(x=self.data[col])
+                plt.title(f'Outlier Boxplot: {col}')
+                plt.savefig(os.path.join(self.plots_dir, f'outlier_boxplot_{col}.png'))
+                plt.close()
 
-        missing_after = self.data.isnull().sum().sum()
-        print(f"Missing values after: {missing_after}")
-        return self.data
+        print("\nOutlier Detection (IQR):")
+        for col, count in outlier_summary.items():
+            if count > 0:
+                print(f" - {col}: {count} outliers")
 
-    def define_data_types(self):
-        conversions = {
-            'Date': 'datetime64[ns]',
-            'Arrest': 'bool',
-            'Domestic': 'bool',
-            'Year': 'int32'
+        return outlier_summary
+
+    # ---------- EDA with plots ----------
+    def explore_data(self, save_plots=True):
+        print("\nEXPLORATORY DATA ANALYSIS (EDA)")
+        print("=" * 60)
+
+        numeric_cols = self.data.select_dtypes(include=[np.number]).columns.tolist()
+        cat_cols = self.data.select_dtypes(include=['object', 'category']).columns.tolist()
+
+        print("\nSummary statistics for numeric columns:")
+        print(self.data[numeric_cols].describe().round(3))
+
+        if save_plots:
+            for col in numeric_cols[:20]:
+                plt.figure(figsize=(6,4))
+                sns.histplot(self.data[col].dropna(), kde=True, bins=30)
+                plt.title(f'Histogram + KDE: {col}')
+                plt.savefig(os.path.join(self.plots_dir, f'hist_kde_{col}.png'))
+                plt.close()
+
+            for col in numeric_cols[:20]:
+                plt.figure(figsize=(6,4))
+                sns.boxplot(x=self.data[col].dropna())
+                plt.title(f'Boxplot: {col}')
+                plt.savefig(os.path.join(self.plots_dir, f'boxplot_{col}.png'))
+                plt.close()
+
+            corr = self.data[numeric_cols].corr()
+            plt.figure(figsize=(10,8))
+            sns.heatmap(corr, annot=True, fmt=".2f", cmap='coolwarm', cbar=True)
+            plt.title('Correlation Heatmap')
+            plt.tight_layout()
+            plt.savefig(os.path.join(self.plots_dir, 'correlation_heatmap.png'))
+            plt.close()
+
+        return {
+            "describe_numeric": self.data[numeric_cols].describe(),
+            "describe_categorical": {col: self.data[col].value_counts() for col in cat_cols[:10]},
+            "correlations": self.data[numeric_cols].corr()
         }
 
-        for col, dtype in conversions.items():
-            if col in self.data.columns:
-                try:
-                    if dtype == 'datetime64[ns]':
-                        self.data[col] = pd.to_datetime(self.data[col], errors='coerce')
-                    elif dtype == 'bool':
-                        self.data[col] = self.data[col].astype(str).str.lower() == 'true'
-                    else:
-                        self.data[col] = self.data[col].astype(dtype)
-                except:
-                    pass
-
-        return self.data.dtypes
-
-    def create_features(self):
-        created_features = []
-
-        if 'Date' in self.data.columns:
-            self.data['Hour'] = pd.to_datetime(self.data['Date'], errors='coerce').dt.hour
-            self.data['DayOfWeek'] = pd.to_datetime(self.data['Date'], errors='coerce').dt.dayofweek
-            self.data['Month'] = pd.to_datetime(self.data['Date'], errors='coerce').dt.month
-            created_features.extend(['Hour', 'DayOfWeek', 'Month'])
-
-        if all(col in self.data.columns for col in ['Latitude', 'Longitude']):
-            chicago_lat, chicago_lon = 41.8781, -87.6298
-            self.data['DistanceFromCenter'] = np.sqrt(
-                (self.data['Latitude'] - chicago_lat) ** 2 +
-                (self.data['Longitude'] - chicago_lon) ** 2
-            )
-            created_features.append('DistanceFromCenter')
-
-        print(f"Created {len(created_features)} new features: {created_features}")
-        return created_features
-
-    def detect_outliers(self):
-        """Placeholder for numeric outlier detection logic.
-
-        This will later be expanded to support multiple detection
-        strategies (e.g. IQR and z-score) and optional removal.
-        Currently, it just returns the data unchanged.
-        """
-        if self.data is None:
-            print("No data loaded for outlier detection.")
-            return None
-
-        print("Outlier detection not yet implemented — data unchanged.")
-        return self.data
-
+    # ---------- Cleaning ----------
     def clean_data(self):
         duplicates_before = self.data.duplicated().sum()
         self.data.drop_duplicates(inplace=True)
@@ -139,116 +179,359 @@ class DataPreprocessor:
 
         text_cols = self.data.select_dtypes(include=['object']).columns
         for col in text_cols:
-            if self.data[col].dtype == 'object':
-                self.data[col] = self.data[col].astype(str).str.strip().str.upper()
+            try:
+                self.data[col] = self.data[col].astype(str).str.strip()
+            except Exception:
+                pass
 
+        if 'Date' in self.data.columns:
+            self.data['Date_parsed'] = pd.to_datetime(self.data['Date'], errors='coerce')
+            if 'Year' not in self.data.columns:
+                self.data['Year'] = self.data['Date_parsed'].dt.year
+            if 'Month' not in self.data.columns:
+                self.data['Month'] = self.data['Date_parsed'].dt.month
+            if 'Day' not in self.data.columns:
+                self.data['Day'] = self.data['Date_parsed'].dt.day
+
+        for col in ["Ward", "Community Area"]:
+            if col in self.data.columns:
+                self.data[col] = self.data[col].fillna("UNKNOWN").astype(str)
+
+        rename_map = {
+            'Primary Type': 'PrimaryType',
+            'FBI Code': 'FBI_Code',
+            'Location Description': 'LocationDescription'
+        }
+        rename_map = {k: v for k, v in rename_map.items() if k in self.data.columns}
+        if rename_map:
+            self.data.rename(columns=rename_map, inplace=True)
+
+        for col in ['Latitude', 'Longitude']:
+            if col in self.data.columns:
+                self.data[col] = pd.to_numeric(self.data[col], errors='coerce')
+
+        print("Basic cleaning complete.")
         return self.data
 
-    def sample_data(self, method='random', n=10000):
-        original_size = len(self.data)
+    # ---------- Feature creation ----------
+    def create_features(self):
+        created = []
+        if 'Date_parsed' in self.data.columns:
+            self.data['Hour'] = self.data['Date_parsed'].dt.hour
+            self.data['DayOfWeek'] = self.data['Date_parsed'].dt.dayofweek
+            created.extend(['Hour', 'DayOfWeek'])
 
-        if method == 'random':
-            sampled_data = self.data.sample(n=min(n, len(self.data)), random_state=42)
-            print(f"Random sampling: {len(sampled_data)} from {original_size}")
-        elif method == 'systematic':
-            step = len(self.data) // n
-            indices = list(range(0, len(self.data), step))[:n]
-            sampled_data = self.data.iloc[indices]
-            print(f"Systematic sampling: {len(sampled_data)} from {original_size}")
-        else:
-            sampled_data = self.data
+        if all(c in self.data.columns for c in ['Latitude', 'Longitude']):
+            chicago_lat, chicago_lon = 41.8781, -87.6298
+            self.data['DistanceFromCenter'] = np.sqrt(
+                (self.data['Latitude'] - chicago_lat) ** 2 +
+                (self.data['Longitude'] - chicago_lon) ** 2
+            )
+            created.append('DistanceFromCenter')
 
-        self.data = sampled_data.copy()
-        return sampled_data
+        if 'PrimaryType' in self.data.columns:
+            violent_keywords = ['HOMICIDE', 'ROBBERY', 'ASSAULT', 'BATTERY', 'CRIM SEXUAL ASSAULT']
+            self.data['IsViolent'] = self.data['PrimaryType'].astype(str).str.upper().isin(violent_keywords).astype(int)
+            created.append('IsViolent')
 
-    def normalize_features(self):
-        numeric_cols = self.data.select_dtypes(include=[np.number]).columns
-        if len(numeric_cols) > 0:
-            scaler = MinMaxScaler()
-            self.data[numeric_cols] = scaler.fit_transform(self.data[numeric_cols])
-            print(f"Normalized {len(numeric_cols)} numeric columns using MinMaxScaler")
-        else:
-            print("No numeric columns found for normalization")
-        return self.data
+        print(f"Created features: {created}")
+        return created
 
-    def encode_categorical(self):
-        categorical_cols = self.data.select_dtypes(include=['object', 'category']).columns
-        for col in categorical_cols:
-            if self.data[col].nunique() < 50:
+    # ---------- Numeric normalization ----------
+    def normalize_numeric_minmax(self, numeric_cols=None, exclude_cols=None):
+        if exclude_cols is None:
+            exclude_cols = ['ID', 'CaseNumber', 'RecordID', 'Arrest', 'Domestic', 'IsViolent',
+                            'Year', 'Month', 'Day', 'Hour', 'DayOfWeek']
+
+        if numeric_cols is None:
+            numeric_cols = self.data.select_dtypes(include=[np.number]).columns.tolist()
+
+        numeric_cols = [c for c in numeric_cols if c not in exclude_cols]
+
+        if not numeric_cols:
+            print("No numeric columns found for normalization.")
+            return []
+
+        scaler = MinMaxScaler()
+        self.data[numeric_cols] = scaler.fit_transform(self.data[numeric_cols])
+        print(f"Normalized {len(numeric_cols)} numeric columns using MinMaxScaler: {numeric_cols}")
+
+        return numeric_cols
+
+    # ---------- Encoding ----------
+    def encode_categoricals(self, max_unique_for_label=50):
+        cat_cols = self.data.select_dtypes(include=['object', 'category']).columns.tolist()
+        encoded_cols = []
+        for col in cat_cols:
+            nunique = self.data[col].nunique(dropna=True)
+            if nunique == 0:
+                continue
+            if nunique <= max_unique_for_label:
                 le = LabelEncoder()
-                self.data[f'{col}_encoded'] = le.fit_transform(self.data[col].astype(str))
-                print(f"Encoded categorical column: {col}")
+                self.data[f"{col}_encoded"] = le.fit_transform(self.data[col].astype(str))
+                encoded_cols.append(f"{col}_encoded")
             else:
-                print(f"Encoding skipped for {col} due to {self.data[col].nunique()} unique values.")
-                return self.data
+                print(f"Skipping label encoding for {col} (unique={nunique})")
+        print(f"Encoded columns: {encoded_cols}")
+        return encoded_cols
 
-    def reduce_dimensionality(self, n_components=2):
-        numeric_cols = self.data.select_dtypes(include=[np.number]).columns
+    # ---------- Feature selection ----------
+    def select_feature_subset(self, target_column=None, k=20):
+        if self._feature_selector_external is not None:
+            try:
+                print("Running external feature selector...")
+                selected_df = self._feature_selector_external(self.data.copy())
+                if isinstance(selected_df, pd.DataFrame):
+                    self.data = selected_df
+                    print("External selector returned a dataframe; replaced data.")
+                    return self.data.columns.tolist()
+                elif isinstance(selected_df, (list, tuple, np.ndarray)):
+                    print(f"External selector returned feature list: {len(selected_df)} features")
+                    keep = [c for c in self.data.columns if c in selected_df]
+                    self.data = self.data[keep].copy()
+                    return keep
+            except Exception as e:
+                print(f"External selector failed: {e}\nFalling back to internal selector.")
+
+        numeric_cols = self.data.select_dtypes(include=[np.number]).columns.tolist()
+        if target_column and target_column in self.data.columns:
+            print(f"Selecting top {k} features using SelectKBest with target '{target_column}'")
+            tmp = self.data.dropna(subset=[target_column])
+            X = tmp[numeric_cols].fillna(0)
+            y = tmp[target_column]
+            try:
+                skb = SelectKBest(score_func=f_classif, k=min(k, X.shape[1]))
+                skb.fit(X, y)
+                mask = skb.get_support()
+                chosen = [c for c, m in zip(numeric_cols, mask) if m]
+            except Exception:
+                chosen = sorted(numeric_cols, key=lambda c: self.data[c].var(), reverse=True)[:k]
+        else:
+            print(f"No target provided. Selecting top {k} numeric features by variance.")
+            chosen = sorted(numeric_cols, key=lambda c: self.data[c].var(), reverse=True)[:k]
+
+        keep_cols = chosen + [c for c in self.data.columns if c not in numeric_cols]
+        self.data = self.data[keep_cols].copy()
+        print(f"Selected features: {chosen}")
+        return chosen
+    # ---------- Aggregation ----------
+    def aggregate_monthly_and_type_counts(self):
+        if 'Year' not in self.data.columns or 'Month' not in self.data.columns:
+            if 'Date_parsed' in self.data.columns:
+                self.data['Year'] = self.data['Date_parsed'].dt.year
+                self.data['Month'] = self.data['Date_parsed'].dt.month
+            else:
+                print("No Year/Month available for aggregation; skipping aggregation.")
+                return []
+
+        self.data['YearMonth'] = self.data['Year'].astype(str) + "-" + self.data['Month'].astype(str).str.zfill(2)
+
+        monthly_counts = self.data.groupby('YearMonth').size().rename('MonthlyCrimeCount').reset_index()
+        self.data = self.data.merge(monthly_counts, on='YearMonth', how='left')
+
+        created = ['MonthlyCrimeCount']
+        if 'PrimaryType' in self.data.columns:
+            type_month_counts = self.data.groupby(['YearMonth', 'PrimaryType']).size().rename(
+                'TypeMonthlyCount').reset_index()
+            self.data = self.data.merge(type_month_counts, on=['YearMonth', 'PrimaryType'], how='left')
+            created.append('TypeMonthlyCount')
+
+        print(f"Aggregation complete. Created features: {created}")
+        return created
+
+    # ---------- Discretization ----------
+    def discretize_numeric(self, numeric_cols=None, n_bins=5, strategy='quantile', exclude_cols=None):
+        if exclude_cols is None:
+            exclude_cols = [
+                'ID', 'CaseNumber', 'RecordID', 'Arrest', 'Domestic', 'IsViolent',
+                'Year', 'Month', 'Day', 'Hour', 'DayOfWeek'
+            ]
+
+        if numeric_cols is None:
+            numeric_cols = self.data.select_dtypes(include=[np.number]).columns.tolist()
+
+        numeric_cols = [
+            c for c in numeric_cols
+            if c not in exclude_cols and self.data[c].nunique() > n_bins
+        ]
+
+        if not numeric_cols:
+            print("No numeric columns suitable for discretization.")
+            return []
+
+        est = KBinsDiscretizer(n_bins=n_bins, encode='ordinal', strategy=strategy)
+        discretized = est.fit_transform(self.data[numeric_cols].fillna(0))
+        for i, col in enumerate(numeric_cols):
+            self.data[f"{col}_bin"] = discretized[:, i].astype(int)
+
+        print(f"Discretized {len(numeric_cols)} columns into {n_bins} bins (strategy={strategy}).")
+        return [f"{c}_bin" for c in numeric_cols]
+
+
+    # ---------- Binarization ----------
+    def binarize_numeric(self):
+        numeric_cols = ['Beat', 'District', 'DistanceFromCenter', 'MonthlyCrimeCount', 'TypeMonthlyCount']
+
+        medians = self.data[numeric_cols].median()
+        binarized = self.data[numeric_cols].apply(lambda col: (col > medians[col.name]).astype(int))
+        for c in numeric_cols:
+            self.data[f"{c}_bin01"] = binarized[c]
+
+        print(f"Binarized {len(numeric_cols)} numeric columns using per-column median threshold.")
+        return [f"{c}_bin01" for c in numeric_cols]
+
+    # ---------- PCA ----------
+    def apply_pca(self, n_components=3, numeric_cols=None, exclude_cols=None):
+
+        if exclude_cols is None:
+            exclude_cols = ['ID', 'CaseNumber', 'RecordID', 'Arrest', 'Domestic', 'IsViolent']
+
+        if numeric_cols is None:
+            numeric_cols = self.data.select_dtypes(include=[np.number]).columns.tolist()
+
+        numeric_cols = [c for c in numeric_cols if c not in exclude_cols and self.data[c].nunique() > 2]
 
         if len(numeric_cols) < n_components:
-            print("Not enough numeric columns for PCA.")
-            return None
+            print(f"Not enough numeric columns for PCA (found {len(numeric_cols)}, need {n_components}).")
+            return []
 
         scaler = StandardScaler()
-        scaled_data = scaler.fit_transform(self.data[numeric_cols])
+        X = self.data[numeric_cols].fillna(0)
+        X_scaled = scaler.fit_transform(X)
 
         pca = PCA(n_components=n_components)
-        pca_result = pca.fit_transform(scaled_data)
-
+        pcs = pca.fit_transform(X_scaled)
         for i in range(n_components):
-            self.data[f'PCA_{i + 1}'] = pca_result[:, i]
+            self.data[f'PCA_{i + 1}'] = pcs[:, i]
 
-        explained_var = np.sum(pca.explained_variance_ratio_) * 100
-        print(f"PCA reduction complete ({n_components} components) — Explained variance: {explained_var:.2f}%")
-        return self.data
+        explained = np.sum(pca.explained_variance_ratio_) * 100
+        print(
+            f"PCA applied: {n_components} components, explained variance {explained:.2f}% on {len(numeric_cols)} columns")
+        return [f'PCA_{i + 1}' for i in range(n_components)]
 
-    def generate_report(self):
-        print("\n" + "=" * 50)
-        print("DATA PREPROCESSING REPORT")
-        print("=" * 50)
+    # ---------- Generate Report ----------
+    def generate_report(self, top_missing=20):
+        print("\n" + "=" * 60)
+        print("CHICAGO CRIMES DATA PREPROCESSING REPORT")
+        print("=" * 60)
 
-        print(f"Original data: {self.original_data.shape[0]} rows, {self.original_data.shape[1]} columns")
-        print(f"Processed data: {self.data.shape[0]} rows, {self.data.shape[1]} columns")
+        if self.original_data is not None:
+            print(f"Original data: {self.original_data.shape[0]:,} rows, {self.original_data.shape[1]:,} columns")
+        print(f"Processed data: {self.data.shape[0]:,} rows, {self.data.shape[1]:,} columns")
+        print(f"Memory usage: {self.data.memory_usage(deep=True).sum() / 1024 ** 2:.2f} MB")
 
-        rows_change = self.data.shape[0] - self.original_data.shape[0]
-        cols_change = self.data.shape[1] - self.original_data.shape[1]
+        missing_df = self.data.isnull().sum().reset_index()
+        missing_df.columns = ['Column', 'MissingCount']
+        missing_df['MissingPercent'] = (missing_df['MissingCount'] / len(self.data) * 100).round(2)
+        missing_df = missing_df.sort_values(by='MissingPercent', ascending=False)
 
-        print(f"Rows change: {rows_change:+d}")
-        print(f"Columns change: {cols_change:+d}")
-        print(f"Missing values: {self.data.isnull().sum().sum()}")
-        print(f"Duplicates: {self.data.duplicated().sum()}")
+        if missing_df['MissingCount'].sum() > 0:
+            print("\nTop columns with missing values:")
+            print(missing_df.head(top_missing).to_string(index=False))
+        else:
+            print("\nNo missing values found.")
 
-        return {
-            'original_shape': self.original_data.shape,
+        dup_count = self.data.duplicated().sum()
+        print(f"\nDuplicate rows: {dup_count:,} ({dup_count / len(self.data) * 100:.2f}%)")
+
+        numeric_cols = self.data.select_dtypes(include=[np.number]).columns.tolist()
+        if numeric_cols:
+            print("\nNumeric column summary (first 10 columns):")
+            print(self.data[numeric_cols[:10]].describe().round(3).to_string())
+
+        cat_cols = self.data.select_dtypes(include=['object', 'category']).columns.tolist()
+        if cat_cols:
+            print("\nCategorical column unique counts (first 10 columns):")
+            for col in cat_cols[:10]:
+                print(f"{col}: {self.data[col].nunique()} unique values")
+
+        print("=" * 60)
+
+        summary = {
+            'original_shape': self.original_data.shape if self.original_data is not None else None,
             'final_shape': self.data.shape,
-            'missing_values': self.data.isnull().sum().sum(),
-            'duplicates': self.data.duplicated().sum()
+            'memory_MB': round(self.data.memory_usage(deep=True).sum() / 1024 ** 2, 2),
+            'missing_values_total': int(missing_df['MissingCount'].sum()),
+            'duplicates_total': int(dup_count),
+            'numeric_columns': numeric_cols,
+            'categorical_columns': cat_cols
         }
+        return summary
+
+    # ---------- SAVE NEW DATASET ----------
+    def save_processed(self, filename="CrimesChicagoDatasetPreprocessed", format='csv'):
+        os.makedirs(self.processed_dir, exist_ok=True)
+        outpath = os.path.join(self.processed_dir, filename)
+
+        if format.lower() == 'xlsx':
+            outpath += '.xlsx'
+            self.data.to_excel(outpath, index=False)
+        else:
+            outpath += '.csv'
+            self.data.to_csv(outpath, index=False)
+
+        print(f"Processed data saved to: {outpath}")
+        return outpath
 
 
-def main():
-    preprocessor = DataPreprocessor()
+def main(force_full=False, sample_n=5000):
+    pre = DataPreprocessor(
+        unprocessed_dir="../unprocessed_datasets",
+        processed_dir="../processed_datasets"
+    )
 
-    data_file = "../processed_datasets/integrated_data.csv"
-    preprocessor.load_data(data_file)
+    try:
+        pre.integrate_unprocessed_csvs(pattern="*.csv")
+    except Exception as e:
+        print(f"Integration failed: {e}")
+        return pre
 
-    if preprocessor.data is not None:
-        preprocessor.define_data_types()
-        preprocessor.assess_data_quality()
-        preprocessor.sample_data(method='random', n=5000)
-        preprocessor.handle_missing_values(strategy='mean')
-        preprocessor.clean_data()
-        preprocessor.create_features()
-        preprocessor.normalize_features()
-        preprocessor.encode_categorical()
-        preprocessor.reduce_dimensionality(n_components=3)
-        report = preprocessor.generate_report()
+    if force_full:
+        print("Processing full dataset.")
+    else:
+        try:
+            pre.choose_sample_or_full(sample_n=sample_n)
+        except Exception:
+            print("Sample selection skipped, proceeding with full dataset.")
 
-        output_file = "../processed_datasets/CrimesChicagoDatasetPreprocessedSample.csv"
-        preprocessor.data.to_csv(output_file, index=False)
-        print(f"\nProcessed data saved to: {output_file}")
+    pre.assess_data_quality()
 
-    return preprocessor
+    pre.remove_incorrect_values()
+    pre.detect_outliers_iqr()
+    pre.explore_data()
+
+    pre.clean_data()
+    pre.create_features()
+
+    numeric_cols = pre.normalize_numeric_minmax()
+    pre.encode_categoricals(max_unique_for_label=50)
+
+    target = None
+    if 'Arrest' in pre.data.columns:
+        if pre.data['Arrest'].dtype == bool:
+            pre.data['Arrest'] = pre.data['Arrest'].astype(int)
+        if pre.data['Arrest'].dtype in [np.int64, np.int32, 'int64', 'int32']:
+            target = 'Arrest'
+
+    pre.aggregate_monthly_and_type_counts()
+
+    disc_cols = pre.discretize_numeric(numeric_cols=None, n_bins=5, strategy='quantile')
+    bin_cols = pre.binarize_numeric()
+
+    selected = pre.select_feature_subset(target_column=target, k=20)
+
+    numeric_for_pca = [
+        c for c in pre.data.select_dtypes(include=[np.number]).columns
+        if c not in ['ID', 'CaseNumber', 'RecordID', 'Year', 'Month', 'Day', 'Hour', 'DayOfWeek', 'Arrest', 'Domestic', 'IsViolent']
+        and pre.data[c].nunique() > 2
+    ]
+    if numeric_for_pca:
+        pre.apply_pca(n_components=min(3, len(numeric_for_pca)), numeric_cols=numeric_for_pca)
+
+    report = pre.generate_report()
+    pre.save_processed(filename="CrimesChicagoDatasetPreprocessed", format='csv')
+
+    return pre
 
 
 if __name__ == "__main__":
