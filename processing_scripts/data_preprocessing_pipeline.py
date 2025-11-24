@@ -39,7 +39,6 @@ class DataPreprocessor:
         self.original_data = self.data.copy()
         print(f"Integrated {len(files)} files -> {self.data.shape[0]} rows, {self.data.shape[1]} columns")
         return self.data
-
     # ---------- Sampling decision ----------
     def choose_sample_or_full(self, sample_n=5000):
         choice = input(
@@ -77,10 +76,17 @@ class DataPreprocessor:
     def remove_incorrect_values(self):
         before = len(self.data)
 
+        # 1. Handle Latitude (Keep NaNs, only remove invalid numbers)
         if 'Latitude' in self.data.columns:
-            self.data = self.data[(self.data['Latitude'] >= -90) & (self.data['Latitude'] <= 90)]
+            # Keep if NaN OR if valid range
+            mask = (self.data['Latitude'].isna()) | \
+                   ((self.data['Latitude'] >= -90) & (self.data['Latitude'] <= 90))
+            self.data = self.data[mask]
+
         if 'Longitude' in self.data.columns:
-            self.data = self.data[(self.data['Longitude'] >= -180) & (self.data['Longitude'] <= 180)]
+            mask = (self.data['Longitude'].isna()) | \
+                   ((self.data['Longitude'] >= -180) & (self.data['Longitude'] <= 180))
+            self.data = self.data[mask]
 
         if 'Year' in self.data.columns:
             self.data = self.data[self.data['Year'].between(1990, 2030)]
@@ -88,7 +94,7 @@ class DataPreprocessor:
             self.data = self.data[self.data['Month'].between(1, 12)]
         if 'Day' in self.data.columns:
             self.data = self.data[self.data['Day'].between(1, 31)]
-
+        # In remove_incorrect_values
         for col in self.data.select_dtypes(include=[np.number]).columns:
             if "Distance" in col and self.data[col].min() < 0:
                 self.data = self.data[self.data[col] >= 0]
@@ -97,11 +103,11 @@ class DataPreprocessor:
         print(f"\nIncorrect values removed: {before - after}")
         return before - after
 
-
-    
     def detect_outliers_iqr(self, multiplier=1.5):
         numeric_cols = self.data.select_dtypes(include=[np.number]).columns
         outlier_summary = {}
+
+        # 1. Loop through columns to calculate outliers
         for col in numeric_cols:
             Q1 = self.data[col].quantile(0.25)
             Q3 = self.data[col].quantile(0.75)
@@ -112,10 +118,11 @@ class DataPreprocessor:
             mask = (self.data[col] < lower) | (self.data[col] > upper)
             outlier_summary[col] = int(mask.sum())
 
-            print("\n Outlier Detection (IQR):")
-            for col, count in outlier_summary.items():
-                if count > 0:
-                    print(f" - {col}: {count} outliers")
+        # 2. Print summary ONLY ONCE (Indentation moved left)
+        print("\nOutlier Detection (IQR):")
+        for col_name, count in outlier_summary.items():
+            if count > 0:
+                print(f" - {col_name}: {count} outliers")
 
         return outlier_summary
 
@@ -482,12 +489,12 @@ def main(force_full=False, sample_n=5000):
 
     pre.assess_data_quality()
 
-    pre.remove_incorrect_values()
     pre.detect_outliers_iqr()
     pre.explore_data()
 
     pre.clean_data()
     pre.create_features()
+    pre.remove_incorrect_values()
 
     numeric_cols = pre.normalize_numeric_minmax()
     pre.encode_categoricals(max_unique_for_label=50)
