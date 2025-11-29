@@ -82,6 +82,11 @@ class DataPreprocessor:
             Q3 = self.data[col].quantile(0.75)
             IQR = Q3 - Q1
 
+            lower = Q1 - multiplier * IQR
+            upper = Q3 + multiplier * IQR
+            mask = (self.data[col] < lower) | (self.data[col] > upper)
+            outlier_summary[col] = int(mask.sum())
+
     #
     # # Outlier Detection (IQR)
     #
