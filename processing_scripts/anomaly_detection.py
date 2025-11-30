@@ -114,12 +114,13 @@ class AnomalyDetector:
         column_anomalies = {}
         
         for col in columns:
-            if self.data[col].std() == 0:
+            col_data = self.data[col].dropna()
+            if len(col_data) == 0 or col_data.std() == 0:
                 continue
                 
-            z_scores = np.abs((self.data[col] - self.data[col].mean()) / self.data[col].std())
+            z_scores = np.abs((self.data[col] - col_data.mean()) / col_data.std())
             col_anomalies = z_scores > threshold
-            anomaly_mask = anomaly_mask | col_anomalies
+            anomaly_mask = anomaly_mask | col_anomalies.fillna(False)
             column_anomalies[col] = col_anomalies.sum()
         
         self.data['zscore_anomaly'] = anomaly_mask.astype(int)
@@ -179,15 +180,22 @@ class AnomalyDetector:
         column_anomalies = {}
         
         for col in columns:
-            Q1 = self.data[col].quantile(0.25)
-            Q3 = self.data[col].quantile(0.75)
+            col_data = self.data[col].dropna()
+            if len(col_data) == 0:
+                continue
+                
+            Q1 = col_data.quantile(0.25)
+            Q3 = col_data.quantile(0.75)
             IQR = Q3 - Q1
+            
+            if IQR == 0:  # All values in same range
+                continue
             
             lower_bound = Q1 - factor * IQR
             upper_bound = Q3 + factor * IQR
             
             col_anomalies = (self.data[col] < lower_bound) | (self.data[col] > upper_bound)
-            anomaly_mask = anomaly_mask | col_anomalies
+            anomaly_mask = anomaly_mask | col_anomalies.fillna(False)
             column_anomalies[col] = col_anomalies.sum()
         
         self.data['iqr_anomaly'] = anomaly_mask.astype(int)
@@ -277,8 +285,10 @@ class AnomalyDetector:
         print(f"\nResults:")
         print(f"  Total anomalies detected: {total_anomalies} ({total_anomalies/len(self.data)*100:.2f}%)")
         print(f"  Anomaly scores range: [{scores.min():.4f}, {scores.max():.4f}]")
-        print(f"  Mean score (normal): {scores[~anomaly_mask].mean():.4f}")
-        print(f"  Mean score (anomaly): {scores[anomaly_mask].mean():.4f}")
+        if (~anomaly_mask).any():
+            print(f"  Mean score (normal): {scores[~anomaly_mask].mean():.4f}")
+        if anomaly_mask.any():
+            print(f"  Mean score (anomaly): {scores[anomaly_mask].mean():.4f}")
         
         self.anomaly_results['isolation_forest'] = {
             'total_anomalies': total_anomalies,
@@ -351,8 +361,10 @@ class AnomalyDetector:
         print(f"\nResults:")
         print(f"  Total anomalies detected: {total_anomalies} ({total_anomalies/len(self.data)*100:.2f}%)")
         print(f"  LOF scores range: [{scores.min():.4f}, {scores.max():.4f}]")
-        print(f"  Mean LOF (normal): {scores[~anomaly_mask].mean():.4f}")
-        print(f"  Mean LOF (anomaly): {scores[anomaly_mask].mean():.4f}")
+        if (~anomaly_mask).any():
+            print(f"  Mean LOF (normal): {scores[~anomaly_mask].mean():.4f}")
+        if anomaly_mask.any():
+            print(f"  Mean LOF (anomaly): {scores[anomaly_mask].mean():.4f}")
         
         self.anomaly_results['lof'] = {
             'total_anomalies': total_anomalies,
@@ -425,6 +437,9 @@ class AnomalyDetector:
             cluster_sizes = pd.Series(labels[labels != -1]).value_counts().sort_index()
             print(f"  Cluster sizes: {dict(cluster_sizes.head(5))}")
         
+        if total_anomalies == len(self.data):
+            print("  Warning: All points marked as noise. Try increasing eps value.")
+        
         self.anomaly_results['dbscan'] = {
             'total_anomalies': total_anomalies,
             'eps': eps,
@@ -470,8 +485,12 @@ class AnomalyDetector:
         column_anomalies = {}
         
         for col in columns:
-            median = self.data[col].median()
-            mad = np.median(np.abs(self.data[col] - median))
+            col_data = self.data[col].dropna()
+            if len(col_data) == 0:
+                continue
+                
+            median = col_data.median()
+            mad = np.median(np.abs(col_data - median))
             
             if mad == 0:
                 continue
@@ -479,7 +498,7 @@ class AnomalyDetector:
             # Modified Z-Score formula
             modified_z = 0.6745 * (self.data[col] - median) / mad
             col_anomalies = np.abs(modified_z) > threshold
-            anomaly_mask = anomaly_mask | col_anomalies
+            anomaly_mask = anomaly_mask | col_anomalies.fillna(False)
             column_anomalies[col] = col_anomalies.sum()
         
         self.data['mad_anomaly'] = anomaly_mask.astype(int)
@@ -655,6 +674,29 @@ class AnomalyDetector:
     def get_data(self):
         """Return the current state of the data."""
         return self.data
+    
+    def reset(self):
+        """Reset detector to original data state, clearing all anomaly results."""
+        if self.original_data is not None:
+            self.data = self.original_data.copy()
+            self.anomaly_results = {}
+            self.detected_anomalies = {}
+            print("Detector reset to original data state.")
+        else:
+            print("No original data to reset to.")
+    
+    def quick_summary(self):
+        """Print a quick one-line summary of anomaly counts per method."""
+        if not self.anomaly_results:
+            print("No detection methods have been run.")
+            return
+        
+        print("\nQuick Summary: ", end="")
+        parts = []
+        for method, results in self.anomaly_results.items():
+            count = results.get('total_anomalies', 0)
+            parts.append(f"{method}={count}")
+        print(" | ".join(parts))
     
     def save_cleaned_data(self, filename=None, include_anomaly_flags=True):
         """Save the processed data to CSV."""
