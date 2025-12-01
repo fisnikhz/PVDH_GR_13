@@ -116,7 +116,10 @@ class DataExplorer:
         
         # Index info
         print(f"\nIndex Type: {type(self.data.index).__name__}")
-        print(f"Index Range: {self.data.index.min()} to {self.data.index.max()}")
+        try:
+            print(f"Index Range: {self.data.index.min()} to {self.data.index.max()}")
+        except (TypeError, ValueError):
+            print(f"Index Range: N/A (non-numeric index)")
         
         self.exploration_results['basic_info'] = {
             'rows': rows,
@@ -283,9 +286,11 @@ class DataExplorer:
         stats_df['zeros'] = (self.data[self.numeric_cols] == 0).sum()
         stats_df['zeros%'] = (stats_df['zeros'] / len(self.data) * 100).round(2)
         
-        # Calculate skewness and kurtosis
+        # Calculate skewness and kurtosis (handle NaN)
         stats_df['skewness'] = self.data[self.numeric_cols].skew()
         stats_df['kurtosis'] = self.data[self.numeric_cols].kurtosis()
+        stats_df['skewness'] = stats_df['skewness'].fillna(0)
+        stats_df['kurtosis'] = stats_df['kurtosis'].fillna(0)
         
         print(f"\nAnalyzing {len(self.numeric_cols)} numeric columns:\n")
         
@@ -326,23 +331,40 @@ class DataExplorer:
             
             data_col = self.data[col].dropna()
             
+            if len(data_col) == 0:
+                print(f"  No valid data (all NaN)")
+                continue
+            
             # Basic distribution metrics
             print(f"  Count: {len(data_col):,}")
             print(f"  Range: [{data_col.min():.4f}, {data_col.max():.4f}]")
             print(f"  Mean: {data_col.mean():.4f}")
             print(f"  Median: {data_col.median():.4f}")
-            print(f"  Std Dev: {data_col.std():.4f}")
-            print(f"  Variance: {data_col.var():.4f}")
-            print(f"  Skewness: {data_col.skew():.4f}")
-            print(f"  Kurtosis: {data_col.kurtosis():.4f}")
+            
+            if len(data_col) > 1:
+                std_val = data_col.std()
+                print(f"  Std Dev: {std_val:.4f}")
+                print(f"  Variance: {data_col.var():.4f}")
+                if not np.isnan(data_col.skew()):
+                    print(f"  Skewness: {data_col.skew():.4f}")
+                if not np.isnan(data_col.kurtosis()):
+                    print(f"  Kurtosis: {data_col.kurtosis():.4f}")
+            else:
+                print(f"  Std Dev: N/A (only 1 value)")
+                print(f"  Variance: N/A")
+                print(f"  Skewness: N/A")
+                print(f"  Kurtosis: N/A")
             
             # Value distribution (histogram-like)
-            hist, bin_edges = np.histogram(data_col, bins=bins)
-            print(f"\n  Value Distribution ({bins} bins):")
-            for i in range(len(hist)):
-                pct = hist[i] / len(data_col) * 100
-                bar = "█" * int(pct / 2)
-                print(f"    [{bin_edges[i]:8.2f} - {bin_edges[i+1]:8.2f}]: {hist[i]:5} ({pct:5.1f}%) {bar}")
+            if len(data_col) > 0 and data_col.min() != data_col.max():
+                hist, bin_edges = np.histogram(data_col, bins=bins)
+                print(f"\n  Value Distribution ({bins} bins):")
+                for i in range(len(hist)):
+                    pct = hist[i] / len(data_col) * 100 if len(data_col) > 0 else 0
+                    bar = "█" * int(pct / 2)
+                    print(f"    [{bin_edges[i]:8.2f} - {bin_edges[i+1]:8.2f}]: {hist[i]:5} ({pct:5.1f}%) {bar}")
+            else:
+                print(f"\n  Value Distribution: All values are identical")
             
             results[col] = {
                 'count': len(data_col),
@@ -373,7 +395,15 @@ class DataExplorer:
         print(f"CORRELATION ANALYSIS ({method.upper()})")
         print("="*70)
         
-        corr_matrix = self.data[self.numeric_cols].corr(method=method)
+        # Handle NaN values before correlation
+        numeric_data = self.data[self.numeric_cols].copy()
+        numeric_data = numeric_data.dropna()
+        
+        if len(numeric_data) < 2:
+            print("Not enough valid data points for correlation analysis (need at least 2 rows).")
+            return None
+        
+        corr_matrix = numeric_data.corr(method=method)
         
         print(f"\nCorrelation Matrix ({len(self.numeric_cols)} columns):")
         
@@ -407,12 +437,16 @@ class DataExplorer:
         # Summary statistics
         upper_tri = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
         all_corrs = upper_tri.stack().values
+        all_corrs = all_corrs[~np.isnan(all_corrs)]  # Remove NaN values
         
-        print(f"\nCorrelation Summary:")
-        print(f"  Mean absolute correlation: {np.abs(all_corrs).mean():.4f}")
-        print(f"  Max correlation: {all_corrs.max():.4f}")
-        print(f"  Min correlation: {all_corrs.min():.4f}")
-        print(f"  Highly correlated pairs: {len(high_corr)}")
+        if len(all_corrs) > 0:
+            print(f"\nCorrelation Summary:")
+            print(f"  Mean absolute correlation: {np.abs(all_corrs).mean():.4f}")
+            print(f"  Max correlation: {all_corrs.max():.4f}")
+            print(f"  Min correlation: {all_corrs.min():.4f}")
+            print(f"  Highly correlated pairs: {len(high_corr)}")
+        else:
+            print(f"\nCorrelation Summary: No valid correlations computed.")
         
         self.exploration_results['correlation'] = {
             'matrix': corr_matrix,
@@ -493,14 +527,21 @@ class DataExplorer:
         for col in self.numeric_cols:
             data_col = self.data[col].dropna()
             
+            if len(data_col) == 0:
+                continue
+            
             if method == 'iqr':
                 Q1 = data_col.quantile(0.25)
                 Q3 = data_col.quantile(0.75)
                 IQR = Q3 - Q1
+                if IQR == 0:
+                    continue  # Skip if all values are the same
                 lower = Q1 - factor * IQR
                 upper = Q3 + factor * IQR
                 outliers = ((data_col < lower) | (data_col > upper)).sum()
             elif method == 'zscore':
+                if data_col.std() == 0:
+                    continue  # Skip if no variance
                 z_scores = np.abs((data_col - data_col.mean()) / data_col.std())
                 outliers = (z_scores > 3).sum()
                 lower = data_col.mean() - 3 * data_col.std()
@@ -648,19 +689,30 @@ class DataExplorer:
             col_data = self.data[col]
             
             if col in self.numeric_cols:
-                range_data.append({
-                    'Column': col,
-                    'Type': 'Numeric',
-                    'Min': f"{col_data.min():.4f}",
-                    'Max': f"{col_data.max():.4f}",
-                    'Range': f"{col_data.max() - col_data.min():.4f}"
-                })
+                col_numeric = pd.to_numeric(col_data, errors='coerce').dropna()
+                if len(col_numeric) > 0:
+                    range_data.append({
+                        'Column': col,
+                        'Type': 'Numeric',
+                        'Min': f"{col_numeric.min():.4f}",
+                        'Max': f"{col_numeric.max():.4f}",
+                        'Range': f"{col_numeric.max() - col_numeric.min():.4f}"
+                    })
+                else:
+                    range_data.append({
+                        'Column': col,
+                        'Type': 'Numeric',
+                        'Min': 'N/A',
+                        'Max': 'N/A',
+                        'Range': 'N/A'
+                    })
             elif col in self.categorical_cols:
+                mode_val = col_data.mode()
                 range_data.append({
                     'Column': col,
                     'Type': 'Categorical',
                     'Min': f"{col_data.nunique()} unique",
-                    'Max': f"Most: {col_data.mode().iloc[0] if len(col_data.mode()) > 0 else 'N/A'}",
+                    'Max': f"Most: {mode_val.iloc[0] if len(mode_val) > 0 else 'N/A'}",
                     'Range': f"N/A"
                 })
             else:
@@ -733,6 +785,24 @@ class DataExplorer:
     def get_results(self):
         """Return all exploration results."""
         return self.exploration_results
+    
+    def quick_info(self):
+        """Print a quick one-line summary of the dataset."""
+        if self.data is None:
+            print("No data loaded.")
+            return
+        
+        missing_pct = (self.data.isnull().sum().sum() / self.data.size) * 100
+        duplicates = self.data.duplicated().sum()
+        
+        print(f"Quick Info: {self.data.shape[0]:,} rows × {self.data.shape[1]} cols | "
+              f"Missing: {missing_pct:.1f}% | Duplicates: {duplicates:,} | "
+              f"Numeric: {len(self.numeric_cols)} | Categorical: {len(self.categorical_cols)}")
+    
+    def reset(self):
+        """Clear all exploration results, keeping only the data."""
+        self.exploration_results = {}
+        print("Exploration results cleared. Data remains loaded.")
 
 
 def main():
