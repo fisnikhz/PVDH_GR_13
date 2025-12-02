@@ -32,3 +32,14 @@ def multivariate_analysis(df, numeric_cols):
     plt.title("Correlation Heatmap")
     plt.show()
     return corr_matrix
+
+def categorical_visualization(df, cat_cols):
+    """
+    Plot countplots for categorical columns
+    """
+    for col in cat_cols:
+        plt.figure(figsize=(8,4))
+        sns.countplot(data=df, x=col, order=df[col].value_counts().index)
+        plt.title(f"Countplot for {col}")
+        plt.xticks(rotation=45)
+        plt.show()
