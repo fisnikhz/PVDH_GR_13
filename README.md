@@ -69,6 +69,7 @@ PVDH_GR_13/
 │   ├── data_preprocessing.py            # General preprocessing functions
 │   ├── data_preprocessing_pipeline.py   # Main pipeline orchestrating all steps
 │   ├── data_exploring.py                # Exploration of dataset
+│   ├── anomaly_detection.py             #
 │   ├── data_aggregation.py              # Temporal/spatial/categorical aggregation
 │   ├── feature_engineering.py           # Feature creation and transformation
 │   ├── feature_subset_selection.py      # Feature selection algorithms
@@ -389,7 +390,7 @@ ls unprocessed_datasets/ | head -5
 # Should show: Crimes_2001.csv, Crimes_2002.csv, etc.
 ```
 
-### Results
+## Results and Analysis
 Results
 The preprocessing pipeline successfully ingested and transformed 25 years of Chicago crime data. 
 Below is a detailed breakdown of the data transformation, quality improvements, and statistical findings.
@@ -422,6 +423,9 @@ The pipeline expanded the dataset's analytical power by generating 16 new featur
   * **Transformed:** PrimaryType_encoded, MonthlyCrimeCount, PCA_1
   * **Original:** X Coordinate, Location Description, Year
   
+#### Visual Analysis
+
+The following visualizations demonstrate the statistical properties of the processed data.
 
 ## Key Takeaways
 
