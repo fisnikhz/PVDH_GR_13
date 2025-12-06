@@ -77,6 +77,11 @@ class DataPreprocessor:
     def detect_outliers_iqr(self, multiplier=1.5):
         numeric_cols = self.data.select_dtypes(include=[np.number]).columns
         outlier_summary = {}
+        for col in numeric_cols:
+            Q1 = self.data[col].quantile(0.25)
+            Q3 = self.data[col].quantile(0.75)
+            IQR = Q3 - Q1
+
     #
     # # Outlier Detection (IQR)
     #
