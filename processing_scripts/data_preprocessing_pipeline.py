@@ -87,6 +87,11 @@ class DataPreprocessor:
             mask = (self.data[col] < lower) | (self.data[col] > upper)
             outlier_summary[col] = int(mask.sum())
 
+            print("\n Outlier Detection (IQR):")
+            for col, count in outlier_summary.items():
+                if count > 0:
+                    print(f" - {col}: {count} outliers")
+
     #
     # # Outlier Detection (IQR)
     #
