@@ -82,6 +82,13 @@ class DataPreprocessor:
         if 'Longitude' in self.data.columns:
             self.data = self.data[(self.data['Longitude'] >= -180) & (self.data['Longitude'] <= 180)]
         
+        if 'Year' in self.data.columns:
+            self.data = self.data[self.data['Year'].between(1990, 2030)]
+        if 'Month' in self.data.columns:
+            self.data = self.data[self.data['Month'].between(1, 12)]
+        if 'Day' in self.data.columns:
+            self.data = self.data[self.data['Day'].between(1, 31)]
+        
         after = len(self.data)
         print(f"\nIncorrect values removed: {before - after}")
         return before - after
