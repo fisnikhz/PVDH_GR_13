@@ -97,6 +97,8 @@ class DataPreprocessor:
         print(f"\nIncorrect values removed: {before - after}")
         return before - after
 
+
+    
     def detect_outliers_iqr(self, multiplier=1.5):
         numeric_cols = self.data.select_dtypes(include=[np.number]).columns
         outlier_summary = {}
@@ -124,7 +126,27 @@ class DataPreprocessor:
     #
     # # Exploratory Data Analysis (EDA)
     #
-    # def explore_data(self):
+    def explore_data(self):
+        print("\n EXPLORATORY DATA ANALYSIS (EDA)")
+        print("=" * 60)
+
+        print("\n Summary statistics for numeric columns:")
+        print(self.data.describe(include=[np.number]).round(3))
+
+        print("\n Summary for categorical features:")
+        cat_cols = self.data.select_dtypes(include=['object', 'category']).columns
+        for col in cat_cols[:10]:
+            print(f" - {col}: {self.data[col].nunique()} unique values")
+
+        print("\n Correlation matrix (numeric only):")
+        corr = self.data.select_dtypes(include=[np.number]).corr().round(3)
+        print(corr)
+
+        return {
+            "describe_numeric": self.data.describe(include=[np.number]),
+            "describe_categorical": {col: self.data[col].value_counts() for col in cat_cols[:10]},
+            "correlations": corr
+        }
 
     # ---------- Cleaning ----------
     def clean_data(self):
