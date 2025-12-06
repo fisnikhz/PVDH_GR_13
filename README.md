@@ -64,6 +64,7 @@ PVDH_GR_13/
 │   └── crimes_2024_processed.csv        # Sample processed output
 │
 ├── processing_scripts/                  # Modular data processing scripts
+│   ├── plots/                           # All visuals
 │   ├── data_cleaning.py                 # Cleaning and quality improvement
 │   ├── data_integration.py              # Multi-file integration and merging
 │   ├── data_preprocessing.py            # General preprocessing functions
@@ -391,7 +392,7 @@ ls unprocessed_datasets/ | head -5
 ```
 
 ## Results and Analysis
-Results
+
 The preprocessing pipeline successfully ingested and transformed 25 years of Chicago crime data. 
 Below is a detailed breakdown of the data transformation, quality improvements, and statistical findings.
 <img src="ReadMe_Images/results.png"></img>
@@ -404,14 +405,22 @@ Below is a detailed breakdown of the data transformation, quality improvements, 
 
 **Imputation:** High-missingness columns like Ward (~7.3% missing) and Community Area (~7.3% missing) were successfully handled, ensuring zero null values in the final output.
 
-####  Feature Engineering and Dimensionality Reduction Results
-
+####  **Feature Engineering and Dimensionality Reduction Results**
 
 #### **Feature Engineering**
-The pipeline expanded the dataset's analytical power by generating 16 new features while simultaneously reducing complexity using PCA.
-  * **Temporal Features:** Extracted Hour and DayOfWeek to capture temporal crime patterns.
-  * **Spatial Features:** Calculated DistanceFromCenter to correlate crime frequency with proximity to the city center.
-  
+
+The feature space was expanded from 23 raw columns to 39 features to capture temporal, spatial, and contextual patterns.
+
+| Category | Count | Generated Features |
+| :--- | :---: | :--- |
+| **Temporal** | 2 | `Hour`, `DayOfWeek` |
+| **Spatial** | 1 | `DistanceFromCenter` (Calculated Euclidean distance) |
+| **Contextual** | 1 | `IsViolent` (Binary flag for Homicide, Assault, Battery) |
+| **Aggregations** | 2 | `MonthlyCrimeCount`, `TypeMonthlyCount` |
+| **Encoding** | 3 | `PrimaryType_encoded`, `FBI_Code_encoded`, `source_file_encoded` |
+| **Discretization** | 12 | `X Coordinate_bin`, `Longitude_bin`, `MonthlyCrimeCount_bin`... |
+| **Binarization** | 5 | `Beat_bin01`, `District_bin01`, `DistanceFromCenter_bin01`... |
+
 #### **Dimensionality Reduction (PCA)**
   * Applied Principal Component Analysis to the numeric features.
   * **Result:** The top 3 Principal Components captured 74.59% of the total variance in the dataset. This allows for efficient modeling with fewer variables while retaining the majority of the information.
@@ -427,6 +436,35 @@ The pipeline expanded the dataset's analytical power by generating 16 new featur
 
 The following visualizations demonstrate the statistical properties of the processed data.
 
+ **Feature Correlation**
+![Correlation Heatmap](processing_scripts/plots/correlation_heatmap.png) 
+| *Figure 1: Heatmap showing strong negative correlation (-0.53) between District and X Coordinate.*
+
+ **Outlier Detection**
+![Outlier Detection](processing_scripts/plots/outlier_boxplot_X_Coordinate.png) |
+| *Figure 2: IQR detection identifying spatial outliers in 'X Coordinate'.* |
+
+**Temporal Crime Patterns:**
+![Temporal Distribution](processing_scripts/plots/insight_crime_by_hour.png)
+*Figure 3: Distribution of crimes by Hour. The Kernel Density Estimate (KDE) curve reveals a sharp rise in criminal activity during evening hours (18:00–22:00).*
+
+**Dataset Span:**
+![Year Distribution](processing_scripts/plots/hist_kde_Year.png)
+*Figure 5: Distribution of records across years, verifying the dataset covers the full 2001–2025 range.*
+
+**Geographic & Administrative Density:**
+
+| **Longitude Distribution** | **District Workload** |
+| :---: | :---: |
+| ![Longitude Density](processing_scripts/plots/hist_kde_Longitude.png) | ![District Distribution](processing_scripts/plots/hist_kde_District.png) |
+| *Figure 6: Density plot of crime Longitudes. The bimodal peaks suggest two distinct high-crime vertical zones in the city.* | *Figure 7: Crime count by Police District. The uneven distribution indicates certain districts handle significantly higher case volumes.* |
+
+**Community Analysis:**
+
+| **Community Area Distribution** | **Community Area Boxplot** |
+| :---: | :---: |
+| ![Community Area Density](processing_scripts/plots/hist_kde_Community_Area.png) | ![Community Area Spread](processing_scripts/plots/boxplot_Community_Area.png) |
+| *Figure 8: Distribution of crimes across Chicago's 77 Community Areas. The multi-modal peaks indicate specific neighborhoods with consistently higher incident rates.* | *Figure 9: Boxplot of Community Areas showing the spread and concentration of data.* |
 ## Key Takeaways
 
 ### What This Project Demonstrates
