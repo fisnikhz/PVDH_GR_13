@@ -74,6 +74,13 @@ class DataPreprocessor:
         return missing_df
 
     # Remove incorrect values
+    def remove_incorrect_values(self):
+        before = len(self.data)
+
+        after = len(self.data)
+        print(f"\nIncorrect values removed: {before - after}")
+        return before - after
+
     def detect_outliers_iqr(self, multiplier=1.5):
         numeric_cols = self.data.select_dtypes(include=[np.number]).columns
         outlier_summary = {}
