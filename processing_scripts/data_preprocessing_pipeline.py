@@ -92,6 +92,8 @@ class DataPreprocessor:
                 if count > 0:
                     print(f" - {col}: {count} outliers")
 
+        return outlier_summary
+
     #
     # # Outlier Detection (IQR)
     #
