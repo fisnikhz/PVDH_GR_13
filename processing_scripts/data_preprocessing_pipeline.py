@@ -76,19 +76,23 @@ class DataPreprocessor:
     # Remove incorrect values
     def remove_incorrect_values(self):
         before = len(self.data)
-        
+
         if 'Latitude' in self.data.columns:
             self.data = self.data[(self.data['Latitude'] >= -90) & (self.data['Latitude'] <= 90)]
         if 'Longitude' in self.data.columns:
             self.data = self.data[(self.data['Longitude'] >= -180) & (self.data['Longitude'] <= 180)]
-        
+
         if 'Year' in self.data.columns:
             self.data = self.data[self.data['Year'].between(1990, 2030)]
         if 'Month' in self.data.columns:
             self.data = self.data[self.data['Month'].between(1, 12)]
         if 'Day' in self.data.columns:
             self.data = self.data[self.data['Day'].between(1, 31)]
-        
+
+        for col in self.data.select_dtypes(include=[np.number]).columns:
+            if "Distance" in col and self.data[col].min() < 0:
+                self.data = self.data[self.data[col] >= 0]
+
         after = len(self.data)
         print(f"\nIncorrect values removed: {before - after}")
         return before - after
