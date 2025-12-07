@@ -305,6 +305,7 @@ Below is a detailed breakdown of each module's responsibility:
   * Directory Management: Automatically creates the output directory (../processed_datasets) if it does not exist.
   * Format Support: Supports saving as either .csv (default) or .xlsx (Excel), determined by the format parameter.
   * Output: Generates the final file CrimesChicagoDatasetPreprocessed.csv.
+
 <img src="ReadMe_Images/export.png"></img>
 ---
 
