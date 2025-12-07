@@ -68,6 +68,7 @@ PVDH_GR_13/
 │   ├── data_integration.py              # Multi-file integration and merging
 │   ├── data_preprocessing.py            # General preprocessing functions
 │   ├── data_preprocessing_pipeline.py   # Main pipeline orchestrating all steps
+│   ├── data_exploring.py                # Exploration of dataset
 │   ├── data_aggregation.py              # Temporal/spatial/categorical aggregation
 │   ├── feature_engineering.py           # Feature creation and transformation
 │   ├── feature_subset_selection.py      # Feature selection algorithms
