@@ -155,7 +155,6 @@ This project implements a comprehensive data processing workflow consisting of m
 | **12**   | **Dimensionality Reduction** | Reduce feature dimensionality                      | - PCA <br> - Variance analysis                                                                                                                                                                          | `data_preprocessing.py`          |
 | **13**   | **Anomaly Detection**        | Detect Anomalies in dataset                        | - Statistical: Z-Score, IQR, Modified Z-Score (MAD).                                                                                                                                                    | `anomaly_detection.py`           |
 | **14**   | **Data Exploration**         | Data Quality Score                                 | comprehensive text-based report on data health.                                                                                                                                                         | `data_exploration.py`            |
-Data Quality Score
 
 
 ## Implemented Modules
