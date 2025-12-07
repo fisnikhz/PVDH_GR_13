@@ -439,12 +439,13 @@ The following visualizations demonstrate the statistical properties of the proce
  **Feature Correlation**
  
 ![Correlation Heatmap](processing_scripts/plots/correlation_heatmap.png) 
-| *Figure 1: Heatmap showing strong negative correlation (-0.53) between District and X Coordinate.*
+
+*Figure 1: Heatmap showing strong negative correlation (-0.53) between District and X Coordinate.*
 
 **Outlier Detection**
 
-![Outlier Detection](processing_scripts/plots/outlier_boxplot_X_Coordinate.png) |
-*Figure 2: IQR detection identifying spatial outliers in 'X Coordinate'.* |
+![Outlier Detection](processing_scripts/plots/outlier_boxplot_X_Coordinate.png) 
+*Figure 2: IQR detection identifying spatial outliers in 'X Coordinate'.* 
 
 **Temporal Crime Patterns:**
 
@@ -470,11 +471,12 @@ The following visualizations demonstrate the statistical properties of the proce
 | ![Community Area Density](processing_scripts/plots/hist_kde_Community_Area.png) | ![Community Area Spread](processing_scripts/plots/boxplot_Community_Area.png) |
 | *Figure 8: Distribution of crimes across Chicago's 77 Community Areas. The multi-modal peaks indicate specific neighborhoods with consistently higher incident rates.* | *Figure 9: Boxplot of Community Areas showing the spread and concentration of data.* |
 
----
+
 ### View All Visualizations
 To maintain a concise overview, only the most significant insights are displayed above. However, the pipeline generates **over 25 detailed visualizations**, including individual histograms, boxplots, and KDEs for every numeric feature. 
 
 You can explore the complete collection of generated images in the [**processing_scripts/plots**](processing_scripts/plots) directory.
+___
 
 ## Key Takeaways
 
