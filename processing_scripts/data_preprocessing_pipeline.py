@@ -76,17 +76,10 @@ class DataPreprocessor:
     def remove_incorrect_values(self):
         before = len(self.data)
 
-        # 1. Handle Latitude (Keep NaNs, only remove invalid numbers)
         if 'Latitude' in self.data.columns:
-            # Keep if NaN OR if valid range
-            mask = (self.data['Latitude'].isna()) | \
-                   ((self.data['Latitude'] >= -90) & (self.data['Latitude'] <= 90))
-            self.data = self.data[mask]
-
+            self.data = self.data[(self.data['Latitude'] >= -90) & (self.data['Latitude'] <= 90)]
         if 'Longitude' in self.data.columns:
-            mask = (self.data['Longitude'].isna()) | \
-                   ((self.data['Longitude'] >= -180) & (self.data['Longitude'] <= 180))
-            self.data = self.data[mask]
+            self.data = self.data[(self.data['Longitude'] >= -180) & (self.data['Longitude'] <= 180)]
 
         if 'Year' in self.data.columns:
             self.data = self.data[self.data['Year'].between(1990, 2030)]
