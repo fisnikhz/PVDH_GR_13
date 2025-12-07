@@ -177,18 +177,21 @@ Below is a detailed breakdown of each module's responsibility:
   * **Full Processing:** If selected, processes all ~8.4 million records.
   * **Random Sampling:** If selected (default), extracts a random subset of $N$ rows (default $N=5000$) using sample(n=n, random_state=42).
   * **Reproducibility:** A fixed random seed ensures the sample remains consistent across different runs.
+
 <img src="ReadMe_Images/sample.png"></img>
 
 3. **Quality Assessment (assess_data_quality)**
 
 * **Functionality:** Performs a health check on the raw dataset.
 * **Metrics:** Calculates total memory usage (MB), identifies columns with missing values, and counts duplicate rows based on ID.
+
 <img src="ReadMe_Images/assess.png"></img>
 
 4. **Outlier Detection (detect_outliers_iqr)**
 * **Method:** Interquartile Range (IQR).
 * **Logic:** Defines bounds as $[Q1 - 1.5 \times IQR, Q3 + 1.5 \times IQR]$.
 * **Action:** Iterates through all numeric columns (like X Coordinate) and prints a count of records falling outside these statistical bounds. 
+
 <img src="ReadMe_Images/outliers.png"></img>
 
 5. **Exploratory Data Analysis (EDA) (explore_data)**
@@ -210,6 +213,7 @@ Below is a detailed breakdown of each module's responsibility:
   * **Text Normalization**: Strips leading/trailing whitespace from strings.
   * **Date Parsing**: Converts the string Date column into datetime objects and extracts Year, Month, Day.
   * **Imputation:** Fills NaN values in "Ward" and "Community Area" with "UNKNOWN".
+
 <img src="ReadMe_Images/cleaning.png"></img>
   
 7. **Feature Engineering (create_features)**
@@ -217,6 +221,7 @@ Below is a detailed breakdown of each module's responsibility:
 * **New Features:** Hour & DayOfWeek: Extracted from the parsed timestamp.
 * **DistanceFromCenter:** Calculates Euclidean distance from Chicago's center ($41.8781, -87.6298$).
 * **IsViolent:** Binary flag (1/0) checking if PrimaryType contains keywords like "HOMICIDE", "BATTERY", or "ASSAULT".
+
 <img src="ReadMe_Images/featurengineering.png"></img>
 
 8. **Data Filtering (remove_incorrect_values)**
@@ -226,18 +231,21 @@ Below is a detailed breakdown of each module's responsibility:
   * Longitude must be $[-180, 180]$.
   * Year must be between $1990$ and $2030$.
   * DistanceFromCenter must be non-negative.
+
 <img src="ReadMe_Images/incorrect.png"></img>
 
 9. **Normalization (normalize_numeric_minmax)**
 
 * **Method:** MinMax Scaling.
 * **Logic:** Transforms numeric features (excluding targets/IDs) to the range $[0, 1]$ using the formula $X_{scaled} = \frac{X - X_{min}}{X_{max} - X_{min}}$.
+
 <img src="ReadMe_Images/normalization.png"></img>
 
 10. **Categorical Encoding (encode_categoricals)**
 
 * **Method**: Label Encoding.
 * **Logic:** Converts low-cardinality categorical strings (unique values $\le 50$) into integer labels (e.g., "THEFT" $\rightarrow$ 4).
+
 <img src="ReadMe_Images/encoding.png"></img>
 
 11. **Aggregation (aggregate_monthly_and_type_counts)**
@@ -246,27 +254,35 @@ Below is a detailed breakdown of each module's responsibility:
 * **Features:**
   * **MonthlyCrimeCount:** Total crimes occurring in that specific month/year.
   * **TypeMonthlyCount:** Count of that specific crime type in that month.
+
 <img src="ReadMe_Images/aggregation.png"></img>
 
 12. **Discretization (discretize_numeric)**
 
 * **Method:** Quantile Binning.
 * **Logic:** Uses KBinsDiscretizer to sort continuous variables into 5 equal-frequency bins (e.g., X Coordinate_bin).
+
 <img src="ReadMe_Images/discretization.png"></img>
+
 13. **Binarization (binarize_numeric)**
 
 * **Method:** Median Thresholding.
 * **Logic:** Converts columns like Beat and District into binary (0/1) based on whether they are above the column's median value.
+
 <img src="ReadMe_Images/binarization.png"></img>
+
 14. **Feature Selection (select_feature_subset)**
 
 * **Method:** Filter Method (ANOVA F-value).
 * **Logic:** Uses SelectKBest with f_classif to retain the top 20 features most strongly correlated with the Arrest target.
+
 <img src="ReadMe_Images/selectfeatures.png"></img>
+
 15. **Dimensionality Reduction (apply_pca)**
 
 * **Method:** Principal Component Analysis (PCA).
 * **Logic:** Standardizes the data and projects it onto 3 orthogonal components (PCA_1, PCA_2, PCA_3) to reduce dimensionality while preserving variance.
+
 <img src="ReadMe_Images/pca.png"></img>
 
 16. **Reporting (generate_report)**
@@ -277,8 +293,10 @@ Below is a detailed breakdown of each module's responsibility:
   * **Memory Footprint:** Calculates the final memory usage in MB.
   * **Hygiene Check:** Confirms that zero missing values and zero duplicates remain in the final dataset.
   * **Statistical Snapshot:** Prints descriptive statistics (mean, std, min, max) for the transformed features.
+
 <img src="ReadMe_Images/generatereport1.png"></img>
 <img src="ReadMe_Images/generatereport2.png"></img>
+
 17. **Data Export (save_processed)**
 
 * Functionality: Persists the final, cleaned, and transformed dataframe to a file for use in downstream machine learning tasks.
