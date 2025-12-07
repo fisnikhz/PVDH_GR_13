@@ -9,6 +9,7 @@ from sklearn.impute import SimpleImputer
 import warnings
 warnings.filterwarnings('ignore')
 
+     #-------------Main Class-----------
 class DataPreprocessor:
     def __init__(self, unprocessed_dir="../unprocessed_datasets", processed_dir="../processed_datasets"):
         self.unprocessed_dir = unprocessed_dir
@@ -40,6 +41,7 @@ class DataPreprocessor:
         self.original_data = self.data.copy()
         print(f"Integrated {len(files)} files -> {self.data.shape[0]} rows, {self.data.shape[1]} columns")
         return self.data
+
     # ---------- Sampling decision ----------
     def choose_sample_or_full(self, sample_n=5000):
         choice = input(
@@ -75,7 +77,7 @@ class DataPreprocessor:
         print(f"\nDuplicates: {duplicates} rows ({duplicates / len(self.data) * 100:.2f}%)")
         return missing_df
 
-    # Remove incorrect values
+    #----------Remove incorrect values---------------
     def remove_incorrect_values(self):
         before = len(self.data)
 
@@ -98,7 +100,7 @@ class DataPreprocessor:
         after = len(self.data)
         print(f"\nIncorrect values removed: {before - after}")
         return before - after
-
+    #----------Detect Outliers(IQR)-----------
     def detect_outliers_iqr(self, multiplier=1.5):
         numeric_cols = self.data.select_dtypes(include=[np.number]).columns
         outlier_summary = {}
@@ -122,13 +124,7 @@ class DataPreprocessor:
 
         return outlier_summary
 
-    #
-    # # Outlier Detection (IQR)
-    #
-    # def detect_outliers_iqr(self, multiplier=1.5):
-    #
-    # # Exploratory Data Analysis (EDA)
-    #
+     # -----Exploratory Data Analysis (EDA)------
     def explore_data(self):
         print("\n EXPLORATORY DATA ANALYSIS (EDA)")
         print("=" * 60)
@@ -223,7 +219,7 @@ class DataPreprocessor:
 
         print(f"Created features: {created}")
         return created
-
+    #--------Normalization-----------
     def normalize_numeric_minmax(self, numeric_cols=None, exclude_cols=None):
         if exclude_cols is None:
             exclude_cols = [
