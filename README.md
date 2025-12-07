@@ -27,12 +27,11 @@
 - [Project Overview](#-project-overview)
 - [Repository Structure](#-repository-structure)
 - [Dataset Description](#-dataset-description)
-- [Data Processing Workflow](#-data-processing-workflow)
 - [Implemented Modules](#-implemented-modules)
 - [Technologies Used](#-technologies-used)
 - [Installation & Setup](#-installation--setup)
 - [Results](#-results)
-
+- [Key Takeaways](#-key-takeaways)
 ---
 
 ## Project Overview
@@ -172,9 +171,9 @@ Below is a detailed breakdown of each module's responsibility:
 
 * **Functionality:** Offers an interactive choice to reduce dataset size for rapid prototyping and testing.
 * **Logic:**
-* * **Full Processing:** If selected, processes all ~8.4 million records.
-* * **Random Sampling:** If selected (default), extracts a random subset of $N$ rows (default $N=5000$) using sample(n=n, random_state=42).
-* * **Reproducibility:** A fixed random seed ensures the sample remains consistent across different runs.
+  * **Full Processing:** If selected, processes all ~8.4 million records.
+  * **Random Sampling:** If selected (default), extracts a random subset of $N$ rows (default $N=5000$) using sample(n=n, random_state=42).
+  * **Reproducibility:** A fixed random seed ensures the sample remains consistent across different runs.
 <img src="ReadMe_Images/sample.png"></img>
 
 3. **Quality Assessment (assess_data_quality)**
@@ -220,10 +219,10 @@ Below is a detailed breakdown of each module's responsibility:
 8. **Data Filtering (remove_incorrect_values)**
 * **Functionality:** Removes logically impossible data points after feature creation.
 * **Rules:**
-* * Latitude must be $[-90, 90]$.
-* * Longitude must be $[-180, 180]$.
-* * Year must be between $1990$ and $2030$.
-* * DistanceFromCenter must be non-negative.
+  * Latitude must be $[-90, 90]$.
+  * Longitude must be $[-180, 180]$.
+  * Year must be between $1990$ and $2030$.
+  * DistanceFromCenter must be non-negative.
 <img src="ReadMe_Images/incorrect.png"></img>
 
 9. **Normalization (normalize_numeric_minmax)**
@@ -242,8 +241,8 @@ Below is a detailed breakdown of each module's responsibility:
 
 * **Functionality:** Adds context to individual rows based on monthly trends.
 * **Features:**
-* * **MonthlyCrimeCount:** Total crimes occurring in that specific month/year.
-* * **TypeMonthlyCount:** Count of that specific crime type in that month.
+  * **MonthlyCrimeCount:** Total crimes occurring in that specific month/year.
+  * **TypeMonthlyCount:** Count of that specific crime type in that month.
 <img src="ReadMe_Images/aggregation.png"></img>
 
 12. **Discretization (discretize_numeric)**
@@ -425,45 +424,31 @@ The pipeline expanded the dataset's analytical power by generating 16 new featur
 
 ## Key Takeaways
 
-### Why It Matters
-- This project demonstrates how to build a scalable, end-to-end data pipeline that transforms raw crime data into clean, analysis-ready datasets, enabling efficient insights and reliable machine learning applications.
-
 ### What This Project Demonstrates
 
  **End-to-End Data Pipeline**
 - Complete workflow from raw data to analysis-ready datasets
-- Modular architecture for flexibility
-- Production-ready code structure
+- Modular architecture with a centralized `DataPreprocessor` class
+- Production-ready code structure with error handling
 
  **Data Quality Management**
-- Systematic handling of missing values
-- Duplicate detection and removal
-- Outlier treatment strategies
-- Data type optimization
+- Systematic handling of missing values (Imputation & Filtering)
+- Outlier detection using statistical IQR thresholds
+- Logic-based data validation (Coordinate bounds, Date ranges)
+- Memory optimization using specific data types
 
- **Advanced Feature Engineering**
-- 35+ derived features from 22 original columns
-- Temporal, spatial, and categorical feature extraction
-- Mathematical transformations
-- Encoding strategies
+ **Feature Engineering & Selection**
+- **Temporal Extraction:** Hour, DayOfWeek
+- **Spatial Logic:** Calculated Euclidean distance from City Center
+- **Contextual Flags:** Binary indicators for violent crimes
+- **Dimensionality Reduction:** PCA capturing ~75% variance
+- **Feature Selection:** ANOVA F-test (SelectKBest)
 
  **Multiple Preprocessing Techniques**
-- 4 sampling methods implemented
-- 2 scaling strategies
-- 4 discretization methods
-- 3 feature selection algorithms
-
- **Large-Scale Data Handling**
-- 7.5M+ total records processed
-- Efficient memory management
-- Batch processing capabilities
-- Scalable architecture
-
- **Comprehensive Documentation**
-- Detailed module descriptions
-- Usage examples for all functions
-- Clear workflow explanation
-- Code comments and docstrings
+- **Sampling:** Efficient random sampling for prototyping
+- **Scaling:** MinMax normalization for neural network readiness
+- **Discretization:** Quantile-based binning for continuous variables
+- **Binarization:** Median-thresholding for categorical features
 
 ### Skills Demonstrated
 
