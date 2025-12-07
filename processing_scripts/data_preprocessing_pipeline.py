@@ -87,7 +87,7 @@ class DataPreprocessor:
             self.data = self.data[(self.data['Longitude'] >= -180) & (self.data['Longitude'] <= 180)]
 
         if 'Year' in self.data.columns:
-            self.data = self.data[self.data['Year'].between(1990, 2030)]
+            self.data = self.data[self.data['Year'].between(2001, 2025)]
         if 'Month' in self.data.columns:
             self.data = self.data[self.data['Month'].between(1, 12)]
         if 'Day' in self.data.columns:
