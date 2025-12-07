@@ -2,6 +2,8 @@ import os
 import glob
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelEncoder, KBinsDiscretizer, Binarizer
 from sklearn.decomposition import PCA
 from sklearn.feature_selection import SelectKBest, f_classif
@@ -141,12 +143,78 @@ class DataPreprocessor:
         corr = self.data.select_dtypes(include=[np.number]).corr().round(3)
         print(corr)
 
+        # --- SKEWNESS ---
+        print("\n Skewness (Animi) for numeric columns:")
+        skew_vals = self.data.select_dtypes(include=[np.number]).skew()
+        print(skew_vals.round(3))
         return {
             "describe_numeric": self.data.describe(include=[np.number]),
             "describe_categorical": {col: self.data[col].value_counts() for col in cat_cols[:10]},
             "correlations": corr
         }
 
+    # ---------- Advanced Transformation ----------
+    def handle_skewed_features(self, threshold=1.0):
+        numeric_cols = self.data.select_dtypes(include=[np.number]).columns
+
+        # Safer exclusion list
+        exclude_cols = [
+            'ID', 'Case Number', 'Year', 'Month', 'Day', 'Hour', 'DayOfWeek',
+            'Arrest', 'Domestic', 'IsViolent',
+            'Latitude', 'Longitude', 'X Coordinate', 'Y Coordinate',
+            'Beat', 'District', 'Ward', 'Community Area', 'FBI Code'
+        ]
+        cols_to_check = [c for c in numeric_cols if c not in exclude_cols]
+
+        skewness = self.data[cols_to_check].skew()
+        skewed_cols = skewness[abs(skewness) > threshold].index.tolist()
+
+        if not skewed_cols:
+            print(f"\nNo highly skewed columns found (Threshold > {threshold}).")
+            return []
+
+        print(f"\nDetected {len(skewed_cols)} skewed columns. Applying Log Transformation...")
+
+        transformed = []
+        for col in skewed_cols:
+            skew_val = skewness[col]
+            new_col_name = f"{col}_Log"
+            self.data[new_col_name] = np.log1p(self.data[col])
+
+            print(f" - Transformed '{col}' (Skew: {skew_val:.2f}) -> Created '{new_col_name}'")
+            transformed.append(new_col_name)
+
+            # --- VISUALIZATION BLOCK START ---
+            try:
+                # Ensure plots directory exists
+                plots_dir = os.path.join(self.processed_dir, 'plots')
+                os.makedirs(plots_dir, exist_ok=True)
+
+                plt.figure(figsize=(10, 5))
+
+                # Plot 1: Before
+                plt.subplot(1, 2, 1)
+                sns.histplot(self.data[col], kde=True, color='red', bins=50)
+                plt.title(f"Before: {col}\nSkew: {skew_val:.2f}")
+                plt.xlabel(col)
+
+                # Plot 2: After
+                plt.subplot(1, 2, 2)
+                sns.histplot(self.data[new_col_name], kde=True, color='green', bins=50)
+                new_skew = self.data[new_col_name].skew()
+                plt.title(f"After: Log Transformation\nSkew: {new_skew:.2f}")
+                plt.xlabel(new_col_name)
+
+                plt.tight_layout()
+                save_path = os.path.join(plots_dir, f'skew_correction_{col}.png')
+                plt.savefig(save_path)
+                plt.close()
+                print(f"   (Saved comparison plot to {save_path})")
+            except Exception as e:
+                print(f"   (Warning: Could not save plot: {e})")
+            # --- VISUALIZATION BLOCK END ---
+
+        return transformed
     # ---------- Cleaning ----------
     def clean_data(self):
 
@@ -493,6 +561,9 @@ def main(force_full=False, sample_n=5000):
     pre.clean_data()
     pre.create_features()
     pre.remove_incorrect_values()
+    print("\n--- Stats AFTER Feature Engineering ---")
+    pre.explore_data()
+    skewed_features = pre.handle_skewed_features(threshold=1.0)
 
     numeric_cols = pre.normalize_numeric_minmax()
     pre.encode_categoricals(max_unique_for_label=50)
