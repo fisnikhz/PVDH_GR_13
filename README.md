@@ -200,12 +200,22 @@ Below is a detailed breakdown of each module's responsibility:
 * **Statistics:** Mean, Std, Min, Max for all numeric features.
 * **Categorical Summary:** Unique value counts for text columns.
 * **Correlation Matrix:** A Pearson correlation table showing relationships between numerical variables (e.g., correlation between Latitude and District).
-
 <img src="ReadMe_Images/eda.png"></img>
 <img src="ReadMe_Images/eda2.png"></img>
+<img src="ReadMe_Images/skewnessdetection.png"></img>
 
 
-6. **Data Cleaning (clean_data)**
+6. **Adaptive Skewness Correction (`handle_skewed_features`)**
+
+* **Functionality:** A "smart" diagnostic step that dynamically analyzes feature distributions before scaling.
+* **Logic:**
+    * Calculates the skewness coefficient for all continuous numeric variables.
+    * **Threshold:** If skewness > 1.0 (highly skewed), it automatically applies a **Log Transformation** (`np.log1p`) to normalize the distribution.
+    * **Safety Mechanism:** Explicitly excludes spatial coordinates (`Latitude`, `Longitude`) and cyclic time units (`Hour`) to prevent logical corruption of physical data.
+
+<img src="ReadMe_Images/handleskewness.png"></img>
+
+7. **Data Cleaning (clean_data)**
 
 * **Functionality:** Fixes structural errors in the dataset.
 * **Steps:**
@@ -216,7 +226,7 @@ Below is a detailed breakdown of each module's responsibility:
 
 <img src="ReadMe_Images/cleaning.png"></img>
   
-7. **Feature Engineering (create_features)**
+8. **Feature Engineering (create_features)**
 * **Functionality:** Derives new predictive features from raw data.
 * **New Features:** Hour & DayOfWeek: Extracted from the parsed timestamp.
 * **DistanceFromCenter:** Calculates Euclidean distance from Chicago's center ($41.8781, -87.6298$).
@@ -224,7 +234,7 @@ Below is a detailed breakdown of each module's responsibility:
 
 <img src="ReadMe_Images/featurengineering.png"></img>
 
-8. **Data Filtering (remove_incorrect_values)**
+9. **Data Filtering (remove_incorrect_values)**
 * **Functionality:** Removes logically impossible data points after feature creation.
 * **Rules:**
   * Latitude must be $[-90, 90]$.
@@ -234,21 +244,21 @@ Below is a detailed breakdown of each module's responsibility:
 
 <img src="ReadMe_Images/incorrect.png"></img>
 
-9. **Normalization (normalize_numeric_minmax)**
+10. **Normalization (normalize_numeric_minmax)**
 
 * **Method:** MinMax Scaling.
 * **Logic:** Transforms numeric features (excluding targets/IDs) to the range $[0, 1]$ using the formula $X_{scaled} = \frac{X - X_{min}}{X_{max} - X_{min}}$.
 
 <img src="ReadMe_Images/normalization.png"></img>
 
-10. **Categorical Encoding (encode_categoricals)**
+11. **Categorical Encoding (encode_categoricals)**
 
 * **Method**: Label Encoding.
 * **Logic:** Converts low-cardinality categorical strings (unique values $\le 50$) into integer labels (e.g., "THEFT" $\rightarrow$ 4).
 
 <img src="ReadMe_Images/encoding.png"></img>
 
-11. **Aggregation (aggregate_monthly_and_type_counts)**
+12. **Aggregation (aggregate_monthly_and_type_counts)**
 
 * **Functionality:** Adds context to individual rows based on monthly trends.
 * **Features:**
@@ -257,35 +267,35 @@ Below is a detailed breakdown of each module's responsibility:
 
 <img src="ReadMe_Images/aggregation.png"></img>
 
-12. **Discretization (discretize_numeric)**
+13. **Discretization (discretize_numeric)**
 
 * **Method:** Quantile Binning.
 * **Logic:** Uses KBinsDiscretizer to sort continuous variables into 5 equal-frequency bins (e.g., X Coordinate_bin).
 
 <img src="ReadMe_Images/discretization.png"></img>
 
-13. **Binarization (binarize_numeric)**
+14. **Binarization (binarize_numeric)**
 
 * **Method:** Median Thresholding.
 * **Logic:** Converts columns like Beat and District into binary (0/1) based on whether they are above the column's median value.
 
 <img src="ReadMe_Images/binarization.png"></img>
 
-14. **Feature Selection (select_feature_subset)**
+15. **Feature Selection (select_feature_subset)**
 
 * **Method:** Filter Method (ANOVA F-value).
 * **Logic:** Uses SelectKBest with f_classif to retain the top 20 features most strongly correlated with the Arrest target.
 
 <img src="ReadMe_Images/selectfeatures.png"></img>
 
-15. **Dimensionality Reduction (apply_pca)**
+16. **Dimensionality Reduction (apply_pca)**
 
 * **Method:** Principal Component Analysis (PCA).
 * **Logic:** Standardizes the data and projects it onto 3 orthogonal components (PCA_1, PCA_2, PCA_3) to reduce dimensionality while preserving variance.
 
 <img src="ReadMe_Images/pca.png"></img>
 
-16. **Reporting (generate_report)**
+17. **Reporting (generate_report)**
 
 * **Functionality:** Produces a final summary of the preprocessing pipeline to validate data integrity.
 * **Metrics:**
@@ -297,7 +307,7 @@ Below is a detailed breakdown of each module's responsibility:
 <img src="ReadMe_Images/generatereport1.png"></img>
 <img src="ReadMe_Images/generatereport2.png"></img>
 
-17. **Data Export (save_processed)**
+18. **Data Export (save_processed)**
 
 * Functionality: Persists the final, cleaned, and transformed dataframe to a file for use in downstream machine learning tasks.
 
@@ -493,6 +503,11 @@ The following visualizations demonstrate the statistical properties of the proce
 | ![Community Area Density](processing_scripts/plots/hist_kde_Community_Area.png) | ![Community Area Spread](processing_scripts/plots/boxplot_Community_Area.png) |
 | *Figure 8: Distribution of crimes across Chicago's 77 Community Areas. The multi-modal peaks indicate specific neighborhoods with consistently higher incident rates.* | *Figure 9: Boxplot of Community Areas showing the spread and concentration of data.* |
 
+**Adaptive Skewness Correction:**
+
+![Skewness Correction](processing_scripts/plots/skew_correction_DistanceFromCenter.png)
+
+*Figure 7: Impact of the automated Log Transformation on 'DistanceFromCenter'. The original distribution (Red, Skew=27.89) was successfully normalized (Green) to improve model performance.*
 
 ### View All Visualizations
 To maintain a concise overview, only the most significant insights are displayed above. However, the pipeline generates **over 25 detailed visualizations**, including individual histograms, boxplots, and KDEs for every numeric feature. 
