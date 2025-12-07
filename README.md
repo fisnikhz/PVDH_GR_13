@@ -437,18 +437,22 @@ The feature space was expanded from 23 raw columns to 39 features to capture tem
 The following visualizations demonstrate the statistical properties of the processed data.
 
  **Feature Correlation**
+ 
 ![Correlation Heatmap](processing_scripts/plots/correlation_heatmap.png) 
 | *Figure 1: Heatmap showing strong negative correlation (-0.53) between District and X Coordinate.*
 
- **Outlier Detection**
+**Outlier Detection**
+
 ![Outlier Detection](processing_scripts/plots/outlier_boxplot_X_Coordinate.png) |
 | *Figure 2: IQR detection identifying spatial outliers in 'X Coordinate'.* |
 
 **Temporal Crime Patterns:**
+
 ![Temporal Distribution](processing_scripts/plots/insight_crime_by_hour.png)
 *Figure 3: Distribution of crimes by Hour. The Kernel Density Estimate (KDE) curve reveals a sharp rise in criminal activity during evening hours (18:00–22:00).*
 
 **Dataset Span:**
+
 ![Year Distribution](processing_scripts/plots/hist_kde_Year.png)
 *Figure 5: Distribution of records across years, verifying the dataset covers the full 2001–2025 range.*
 
