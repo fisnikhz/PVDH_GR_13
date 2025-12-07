@@ -444,7 +444,7 @@ The following visualizations demonstrate the statistical properties of the proce
 **Outlier Detection**
 
 ![Outlier Detection](processing_scripts/plots/outlier_boxplot_X_Coordinate.png) |
-| *Figure 2: IQR detection identifying spatial outliers in 'X Coordinate'.* |
+*Figure 2: IQR detection identifying spatial outliers in 'X Coordinate'.* |
 
 **Temporal Crime Patterns:**
 
