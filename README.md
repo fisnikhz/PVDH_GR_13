@@ -64,13 +64,13 @@ PVDH_GR_13/
 │   └── crimes_2024_processed.csv        # Sample processed output
 │
 ├── processing_scripts/                  # Modular data processing scripts
-│   ├── plots/                           # All visuals
+│   ├── plots/                           # All visuals in pipeline
 │   ├── data_cleaning.py                 # Cleaning and quality improvement
 │   ├── data_integration.py              # Multi-file integration and merging
 │   ├── data_preprocessing.py            # General preprocessing functions
 │   ├── data_preprocessing_pipeline.py   # Main pipeline orchestrating all steps
 │   ├── data_exploring.py                # Exploration of dataset
-│   ├── anomaly_detection.py             #
+│   ├── anomaly_detection.py             # Statistical (IQR)
 │   ├── data_aggregation.py              # Temporal/spatial/categorical aggregation
 │   ├── feature_engineering.py           # Feature creation and transformation
 │   ├── feature_subset_selection.py      # Feature selection algorithms
@@ -469,6 +469,13 @@ The following visualizations demonstrate the statistical properties of the proce
 | :---: | :---: |
 | ![Community Area Density](processing_scripts/plots/hist_kde_Community_Area.png) | ![Community Area Spread](processing_scripts/plots/boxplot_Community_Area.png) |
 | *Figure 8: Distribution of crimes across Chicago's 77 Community Areas. The multi-modal peaks indicate specific neighborhoods with consistently higher incident rates.* | *Figure 9: Boxplot of Community Areas showing the spread and concentration of data.* |
+
+---
+### View All Visualizations
+To maintain a concise overview, only the most significant insights are displayed above. However, the pipeline generates **over 25 detailed visualizations**, including individual histograms, boxplots, and KDEs for every numeric feature. 
+
+You can explore the complete collection of generated images in the [**processing_scripts/plots**](processing_scripts/plots) directory.
+
 ## Key Takeaways
 
 ### What This Project Demonstrates
