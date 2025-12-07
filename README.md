@@ -154,7 +154,7 @@ This project implements a comprehensive data processing workflow consisting of m
 | **11**   | **Aggregation**              | Summarize data at different granularities          | **Temporal:** daily, monthly, yearly <br> **Spatial:** grid-based <br> **Categorical:** crime type, location <br> **Stats:** count, mean, sum, std                                                      | `aggregation.py`                 |
 | **12**   | **Dimensionality Reduction** | Reduce feature dimensionality                      | - PCA <br> - Variance analysis                                                                                                                                                                          | `data_preprocessing.py`          |
 | **13**   | **Anomaly Detection**        | Detect Anomalies in dataset                        | - Statistical: Z-Score, IQR, Modified Z-Score (MAD).                                                                                                                                                    | `anomaly_detection.py`           |
-| **14**   | **Data Exploration**         | Data Quality Score                                 | comprehensive text-based report on data health.                                                                                                                                                         | `data_exploration.py`            |
+| **14**   | **Data Exploration**         | Data Quality Score                                 | comprehensive text-based report on data health.                                                                                                                                                         | `data_exploration.py`     |
 
 
 ## Implemented Modules
@@ -451,11 +451,13 @@ The following visualizations demonstrate the statistical properties of the proce
 **Temporal Crime Patterns:**
 
 ![Temporal Distribution](processing_scripts/plots/insight_crime_by_hour.png)
+
 *Figure 3: Distribution of crimes by Hour. The Kernel Density Estimate (KDE) curve reveals a sharp rise in criminal activity during evening hours (18:00–22:00).*
 
 **Dataset Span:**
 
 ![Year Distribution](processing_scripts/plots/hist_kde_Year.png)
+
 *Figure 5: Distribution of records across years, verifying the dataset covers the full 2001–2025 range.*
 
 **Geographic & Administrative Density:**
