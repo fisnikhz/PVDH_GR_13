@@ -17,6 +17,7 @@ class DataPreprocessor:
         self.original_data = None
         self.scaler = None
         self._feature_selector_external = None
+        self.is_sample = False
 
     # ---------- Integration ----------
     def integrate_unprocessed_csvs(self, pattern="*.csv"):
@@ -45,10 +46,12 @@ class DataPreprocessor:
             f"Process full dataset ({len(self.data)} rows) or sample {sample_n} rows? [full/sample] (default sample): ").strip().lower()
         if choice in ["full", "f", "no", "n"]:
             print("Processing full dataset.")
+            self.is_sample = False # <--- ADD THIS
             return
         else:
             n = min(sample_n, len(self.data))
             self.data = self.data.sample(n=n, random_state=42).reset_index(drop=True)
+            self.is_sample = True  # <--- ADD THIS
             print(f"Sampled {n} rows (random).")
 
     # ---------- Assessment ----------
@@ -444,9 +447,16 @@ class DataPreprocessor:
         }
         return summary
 
+
     # ---------- SAVE NEW DATASET ----------
     def save_processed(self, filename="CrimesChicagoDatasetPreprocessed", format='csv'):
         os.makedirs(self.processed_dir, exist_ok=True)
+
+        # Automatic renaming if it is a sample
+        if self.is_sample:
+            filename = f"{filename}_Sample"
+            print(f"Detected sample data. Renaming output to: {filename}")
+
         outpath = os.path.join(self.processed_dir, filename)
 
         if format.lower() == 'xlsx':
@@ -458,7 +468,6 @@ class DataPreprocessor:
 
         print(f"Processed data saved to: {outpath}")
         return outpath
-
 
 def main(force_full=False, sample_n=5000):
     pre = DataPreprocessor(
