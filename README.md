@@ -611,23 +611,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-##  Contributors
-
-**Group 13** - Master's Program in Computer and Software Engineering  
-Faculty of Electrical and Computer Engineering  
-University of Prishtina
-
-- **Fisnik Hazrolli**
-- **Altin Pajaziti**
-- **Olta Pllana**
-- **Rajmondë Shllaku**
-
-**Course:** Data Preparation and Visualization  
-**Profesor:** PhD Mërgim Hoti  
-**Academic Year:** 2025-2026
-
----
-
 ##  Acknowledgments
 
 - **City of Chicago** - For providing open access to crime data
