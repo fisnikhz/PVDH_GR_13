@@ -514,7 +514,56 @@ To maintain a concise overview, only the most significant insights are displayed
 
 You can explore the complete collection of generated images in the [**processing_scripts/plots**](processing_scripts/plots) directory.
 ___
+## Phase 3: Visual Analytics
 
+To demonstrate the critical impact of statistical anomalies, we developed an interactive **Executive Intelligence Dashboard** using Power BI. This phase focuses specifically on **Outlier Analysis**, comparing the **Full Dataset (including Outliers)** against the **Refined Dataset (Outliers Removed)** to reveal how extreme values and non-criminal noise distort operational intelligence.
+
+### Visualization Report
+The report is structured into 5 analytical pages, distinguishing between true crime trends and statistical noise:
+
+| Page | Theme | Key Insight / Narrative |
+| :--- | :--- | :--- |
+| **1** | **Executive Summary** | **The Volume Distortion:** Including outliers (such as non-criminal incidents and TSA checks) inflates the perceived crime rate by ~20%, leading to incorrect resource forecasting. |
+| **2** | **Temporal Analysis** | **Temporal Outliers:** The dataset with outliers shows artificial spikes on dates like January 1st (default values). Removing these temporal outliers reveals the true demand curve (Friday/Saturday nights). |
+| **3** | **Spatial Analysis** | **Geographic Outliers:** The full dataset includes "location outliers" (e.g., the Airport or null coordinates), creating false hotspots. Removing them shifts focus to the Austin neighborhood, the true center of density. |
+| **4** | **Crime Taxonomy** | **Categorical Outliers:** Rare, non-police codes (e.g., "Ritualism" or "Non-Criminal") clutter the taxonomy. Filtering these highlights the "Pareto" reality: Theft and Battery drive the workload. |
+| **5** | **Operational Efficiency** | **Efficiency Skew:** Outliers in case volume (e.g., thousands of minor airport citations) make certain districts appear overwhelmed. Removing outliers normalizes the data, revealing true arrest efficiency for serious crimes. |
+
+### 1. The "Outlier vs. Refined" Methodology
+We utilized a **Split-Screen Layout** to isolate the effect of outliers:
+- **Left Side (Refined):** The dataset with statistical and logical outliers removed (Dataset A).
+- **Right Side (With Outliers):** The full dataset containing extreme values and non-criminal noise (Dataset B).
+
+### 2. Key Visualizations
+
+#### Spatial Reality Check (The Airport Outlier)
+The unfiltered dataset contains over 30,000 incidents at O'Hare International Airport (District 16). These are statistical outliers relative to normal city districts, representing minor TSA violations rather than community crime.
+> **Insight:** By removing these spatial outliers, the heat map corrects itself, shifting the "danger zone" from the airport to the residential neighborhoods where patrols are actually needed.
+
+![Spatial Analysis Dashboard](ReadMe_Images/SpatialAnalysis.png)
+*(Figure 10: Comparison of Crime Heatmaps. The Right side shows the "Airport Outlier" skewing the map; the Left side shows the corrected distribution.)*
+
+#### Temporal Distribution & Artificial Spikes
+The dataset with outliers suggests massive crime waves on specific holidays due to data entry defaults (temporal outliers).
+> **Insight:** Removing these outliers smooths the curve, proving that the actual operational peak occurs consistently on weekends between 18:00 and 02:00, regardless of the holiday calendar.
+
+![Temporal Analysis Dashboard](ReadMe_Images/TemporalAnalysis.png)
+*(Figure 11: Temporal Heatmap showing crime density. The corrected view removes artificial date spikes.)*
+
+#### Operational Efficiency (Impact of Volume Outliers)
+We implemented a Scatter Plot to evaluate Police Districts.
+- **X-Axis:** Crime Volume (Workload)
+- **Y-Axis:** Arrest Rate (Efficiency)
+> **Finding:** Districts with high volumes of "outlier" incidents (minor citations) appear in the bottom-right (High Load/Low Efficiency). Removing these outliers moves these districts back to the cluster, showing their true performance on core criminal matters.
+
+![Efficiency Dashboard](ReadMe_Images/OutcomeAnalysis.png)
+*(Figure 12: Scatter plot comparison. Note how the "With Outliers" view distorts the performance metrics of specific districts.)*
+
+### 3. Interaction & Filtering
+To transform the report into a dynamic tool, we implemented:
+* **Dynamic Slicers:** Universal Year and District filters synced across all 5 pages.
+* **Interaction Isolation:** "Edit Interactions" were used to ensure the Left (Refined) and Right (With Outliers) visuals do not cross-filter, preserving the integrity of the comparison.
+* **Advanced Filtering:** Custom filters were applied for a better analysis.
 ## Key Takeaways
 
 ### What This Project Demonstrates
