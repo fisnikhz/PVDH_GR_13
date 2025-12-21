@@ -126,6 +126,92 @@ class DataPreprocessor:
 
         return outlier_summary
 
+        # [PASTE THIS AFTER detect_outliers_iqr]
+
+    # ---------- Outlier Removal (For ML Data) ----------
+    def remove_outliers_iqr(self, multiplier=1.5):
+        """Removes rows containing outliers from the dataset."""
+        numeric_cols = self.data.select_dtypes(include=[np.number]).columns.tolist()
+        exclude = ['ID', 'CaseNumber', 'Arrest', 'Domestic', 'IsViolent', 'Year', 'Month', 'Day']
+        target_cols = [c for c in numeric_cols if c not in exclude]
+
+        initial_count = len(self.data)
+        print(f"\nStarting outlier removal on {len(target_cols)} columns...")
+
+        # Create a mask for rows that are clean (not outliers)
+        is_clean_row = pd.Series(True, index=self.data.index)
+
+        for col in target_cols:
+            Q1 = self.data[col].quantile(0.25)
+            Q3 = self.data[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower = Q1 - multiplier * IQR
+            upper = Q3 + multiplier * IQR
+
+            # Update mask: Row is clean if it is currently clean AND this column is within bounds
+            is_clean_row = is_clean_row & (self.data[col] >= lower) & (self.data[col] <= upper)
+
+        self.data = self.data[is_clean_row]
+        removed = initial_count - len(self.data)
+        print(f"Removed {removed} rows containing outliers. Remaining: {len(self.data)}")
+        return removed
+
+    # ---------- Sampling for Visualization (Mixed 40k/60k) ----------
+    def create_visualization_sample(self, n_outliers=40000, n_clean=60000, multiplier=1.5):
+        """
+        Creates a SINGLE mixed dataset for Power BI.
+        Attempts to find 40k outliers and 60k clean records.
+        """
+        print(f"\nGenerating mixed visualization sample...")
+        print(f"Targeting: {n_outliers} Outliers, {n_clean} Clean records.")
+
+        numeric_cols = self.data.select_dtypes(include=[np.number]).columns.tolist()
+        exclude = ['ID', 'CaseNumber', 'Arrest', 'Domestic', 'IsViolent', 'Year', 'Month', 'Day']
+        target_cols = [c for c in numeric_cols if c not in exclude]
+
+        # 1. Identify Outlier Rows
+        is_outlier_row = pd.Series(False, index=self.data.index)
+        for col in target_cols:
+            Q1 = self.data[col].quantile(0.25)
+            Q3 = self.data[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower = Q1 - multiplier * IQR
+            upper = Q3 + multiplier * IQR
+            col_outlier = (self.data[col] < lower) | (self.data[col] > upper)
+            is_outlier_row = is_outlier_row | col_outlier
+
+        # 2. Split Data
+        df_outliers = self.data[is_outlier_row].copy()
+        df_clean = self.data[~is_outlier_row].copy()
+
+        # 3. Add Label Column
+        df_outliers['OutlierStatus'] = 'Outlier'
+        df_clean['OutlierStatus'] = 'Normal'
+
+        print(f"Pool available: {len(df_outliers)} outliers, {len(df_clean)} clean rows.")
+
+        # 4. Sample Specific Counts
+        real_n_out = min(n_outliers, len(df_outliers))
+        if real_n_out > 0:
+            sample_out = df_outliers.sample(n=real_n_out, random_state=42)
+        else:
+            sample_out = pd.DataFrame()
+
+        real_n_clean = min(n_clean, len(df_clean))
+        if real_n_clean > 0:
+            sample_clean = df_clean.sample(n=real_n_clean, random_state=42)
+        else:
+            sample_clean = pd.DataFrame()
+
+        # 5. Combine and Save
+        mixed_df = pd.concat([sample_out, sample_clean], ignore_index=True)
+        mixed_df = mixed_df.sample(frac=1, random_state=42).reset_index(drop=True)
+
+        path = os.path.join(self.processed_dir, f"sample_visualization_mixed.csv")
+        mixed_df.to_csv(path, index=False)
+        print(f"Saved mixed sample ({len(sample_out)} outliers, {len(sample_clean)} clean) to: {path}")
+
+        return mixed_df
      # -----Exploratory Data Analysis (EDA)------
     def explore_data(self):
         print("\n EXPLORATORY DATA ANALYSIS (EDA)")
@@ -533,6 +619,7 @@ class DataPreprocessor:
         print(f"Processed data saved to: {outpath}")
         return outpath
 
+
 def main(force_full=False, sample_n=5000):
     pre = DataPreprocessor(
         unprocessed_dir="../unprocessed_datasets",
@@ -555,14 +642,26 @@ def main(force_full=False, sample_n=5000):
 
     pre.assess_data_quality()
 
-    pre.detect_outliers_iqr()
-    pre.explore_data()
+    # 1. Remove impossible values FIRST (Lat > 90, etc)
+    pre.remove_incorrect_values()
 
+    # 2. Clean & Create Features (Needed before sampling)
     pre.clean_data()
     pre.create_features()
-    pre.remove_incorrect_values()
-    print("\n--- Stats AFTER Feature Engineering ---")
+
+    # 3. EXPORT SAMPLES FOR POWER BI (Snapshot outliers before deleting them)
+    #
+    # This creates 'sample_visualization_mixed.csv'
+    pre.create_visualization_sample(n_outliers=40000, n_clean=60000, multiplier=1.5)
+
+    # 4. REMOVE OUTLIERS FOR ML (Delete them from the pipeline)
+    pre.detect_outliers_iqr()  # Just for reporting
+    #pre.remove_outliers_iqr(multiplier=1.5)  # Actually delete them
+
+    # 5. Continue processing on Clean Data
+    print("\n--- Stats AFTER Cleaning & Outlier Removal ---")
     pre.explore_data()
+
     skewed_features = pre.handle_skewed_features(threshold=1.0)
 
     numeric_cols = pre.normalize_numeric_minmax()
@@ -584,8 +683,9 @@ def main(force_full=False, sample_n=5000):
 
     numeric_for_pca = [
         c for c in pre.data.select_dtypes(include=[np.number]).columns
-        if c not in ['ID', 'CaseNumber', 'RecordID', 'Year', 'Month', 'Day', 'Hour', 'DayOfWeek', 'Arrest', 'Domestic', 'IsViolent']
-        and pre.data[c].nunique() > 2
+        if c not in ['ID', 'CaseNumber', 'RecordID', 'Year', 'Month', 'Day', 'Hour', 'DayOfWeek', 'Arrest', 'Domestic',
+                     'IsViolent']
+           and pre.data[c].nunique() > 2
     ]
     if numeric_for_pca:
         pre.apply_pca(n_components=min(3, len(numeric_for_pca)), numeric_cols=numeric_for_pca)
@@ -594,7 +694,5 @@ def main(force_full=False, sample_n=5000):
     pre.save_processed(filename="CrimesChicagoDatasetPreprocessed", format='csv')
 
     return pre
-
-
 if __name__ == "__main__":
     preprocessor = main()
