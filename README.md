@@ -535,14 +535,24 @@ We utilized a **Split-Screen Layout** to isolate the effect of outliers:
 - **Right Side (With Outliers):** The full dataset containing extreme values and non-criminal noise (Dataset B).
 
 ### 2. Key Visualizations
+#### Executive Overview (Volume Distortion)
+The Executive Summary provides a high-level KPI comparison. The raw data creates an inflated perception of crime volume due to administrative duplicates and non-criminal entries.
+> **Insight:** The "Refined" view (Left) provides a sober, accurate count of actual safety incidents, removing over ~20% of the noise visible in the "Raw" view (Right).
 
+![Executive Summary Dashboard](ReadMe_Images/ExecutiveSummary.png)
+*(Figure 9: Executive Dashboard showing the divergence in total case volume and arrest rates between the Refined and Raw datasets.)*
 #### Spatial Reality Check (The Airport Outlier)
 The unfiltered dataset contains over 30,000 incidents at O'Hare International Airport (District 16). These are statistical outliers relative to normal city districts, representing minor TSA violations rather than community crime.
 > **Insight:** By removing these spatial outliers, the heat map corrects itself, shifting the "danger zone" from the airport to the residential neighborhoods where patrols are actually needed.
 
 ![Spatial Analysis Dashboard](ReadMe_Images/SpatialAnalysis.png)
 *(Figure 10: Comparison of Crime Heatmaps. The Right side shows the "Airport Outlier" skewing the map; the Left side shows the corrected distribution.)*
+#### Crime Taxonomy (Pareto Analysis)
+The raw dataset includes dozens of obscure and non-criminal codes (e.g., "Ritualism" or "Non-Criminal") that clutter the analysis.
+> **Insight:** Filtering the data reveals a clear "80/20" rule: just two categories—**Theft** and **Battery**—drive the vast majority of the police workload. The refined view allows command staff to focus on the crimes that actually impact public safety.
 
+![Crime Type Analysis](ReadMe_Images/CrimetypesAnalysis.png)
+*(Figure 12: Pareto analysis of crime types. Note how the "Cleaned" model (Left) removes the long tail of administrative codes visible on the Right.)*
 #### Temporal Distribution & Artificial Spikes
 The dataset with outliers suggests massive crime waves on specific holidays due to data entry defaults (temporal outliers).
 > **Insight:** Removing these outliers smooths the curve, proving that the actual operational peak occurs consistently on weekends between 18:00 and 02:00, regardless of the holiday calendar.
